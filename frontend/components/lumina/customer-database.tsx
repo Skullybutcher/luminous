@@ -31,105 +31,7 @@ interface VisitRecord {
   amount: string
 }
 
-// ─── Dummy Data ───────────────────────────────────────────────────────────────
-const CUSTOMERS: Customer[] = [
-  {
-    id: '#C-001', name: 'Anjali Singh', initials: 'AS', phone: '+91 98765 43210',
-    email: 'anjali.singh@gmail.com', membership: 'Gold', points: 320, visits: 24,
-    lastVisit: '2 days ago', totalSpend: '₹48,000', memberSince: 'Jan 2022',
-    gradientFrom: '#2563EB', gradientTo: '#7C3AED',
-    visitHistory: [
-      { date: 'May 25, 2025', service: 'Keratin Treatment', staff: 'Priya Sharma', branch: 'Downtown', amount: '₹3,500' },
-      { date: 'May 10, 2025', service: 'Hair Color + Cut', staff: 'Rahul Verma', branch: 'Downtown', amount: '₹2,800' },
-      { date: 'Apr 28, 2025', service: 'Manicure & Pedicure', staff: 'Meera Kapoor', branch: 'Westside', amount: '₹1,200' },
-      { date: 'Apr 12, 2025', service: 'Deep Conditioning', staff: 'Priya Sharma', branch: 'Downtown', amount: '₹1,800' },
-    ],
-  },
-  {
-    id: '#C-002', name: 'Rahul Mehta', initials: 'RM', phone: '+91 87654 32109',
-    email: 'rahul.mehta@gmail.com', membership: 'Silver', points: 150, visits: 12,
-    lastVisit: '1 week ago', totalSpend: '₹18,500', memberSince: 'Jun 2023',
-    gradientFrom: '#64748B', gradientTo: '#94A3B8',
-    visitHistory: [
-      { date: 'May 20, 2025', service: 'Haircut & Styling', staff: 'Vikram D', branch: 'Downtown', amount: '₹800' },
-      { date: 'May 5, 2025', service: 'Beard Trim', staff: 'Arjun T', branch: 'Downtown', amount: '₹400' },
-      { date: 'Apr 15, 2025', service: 'Hair Spa', staff: 'Vikram D', branch: 'Downtown', amount: '₹1,500' },
-      { date: 'Mar 28, 2025', service: 'Haircut', staff: 'Rahul Verma', branch: 'Westside', amount: '₹600' },
-    ],
-  },
-  {
-    id: '#C-003', name: 'Preethi K', initials: 'PK', phone: '+91 76543 21098',
-    email: 'preethi.k@gmail.com', membership: 'Gold', points: 480, visits: 31,
-    lastVisit: 'yesterday', totalSpend: '₹62,000', memberSince: 'Sep 2021',
-    gradientFrom: '#D97706', gradientTo: '#F59E0B',
-    visitHistory: [
-      { date: 'May 26, 2025', service: 'Bridal Makeup', staff: 'Sneha Iyer', branch: 'Downtown', amount: '₹8,000' },
-      { date: 'May 18, 2025', service: 'Facial + Cleanup', staff: 'Meera Kapoor', branch: 'Downtown', amount: '₹2,200' },
-      { date: 'May 1, 2025', service: 'Hair Coloring', staff: 'Priya Sharma', branch: 'Westside', amount: '₹3,500' },
-      { date: 'Apr 20, 2025', service: 'Nail Art', staff: 'Meera Kapoor', branch: 'Downtown', amount: '₹900' },
-    ],
-  },
-  {
-    id: '#C-004', name: 'Kiran Rao', initials: 'KR', phone: '+91 65432 10987',
-    email: 'kiran.rao@gmail.com', membership: 'None', points: 40, visits: 4,
-    lastVisit: '3 weeks ago', totalSpend: '₹6,200', memberSince: 'Mar 2025',
-    gradientFrom: '#374151', gradientTo: '#4B5563',
-    visitHistory: [
-      { date: 'May 6, 2025', service: 'Haircut', staff: 'Rahul Verma', branch: 'Westside', amount: '₹700' },
-      { date: 'Apr 10, 2025', service: 'Hair Spa', staff: 'Priya Sharma', branch: 'Downtown', amount: '₹1,400' },
-      { date: 'Mar 22, 2025', service: 'Haircut', staff: 'Vikram D', branch: 'Downtown', amount: '₹700' },
-      { date: 'Mar 8, 2025', service: 'Beard Trim', staff: 'Arjun T', branch: 'Downtown', amount: '₹400' },
-    ],
-  },
-  {
-    id: '#C-005', name: 'Meera Joshi', initials: 'MJ', phone: '+91 54321 09876',
-    email: 'meera.joshi@gmail.com', membership: 'Bronze', points: 90, visits: 8,
-    lastVisit: '5 days ago', totalSpend: '₹11,400', memberSince: 'Oct 2023',
-    gradientFrom: '#92400E', gradientTo: '#B45309',
-    visitHistory: [
-      { date: 'May 22, 2025', service: 'Manicure', staff: 'Meera Kapoor', branch: 'Downtown', amount: '₹600' },
-      { date: 'May 8, 2025', service: 'Facial', staff: 'Sneha Iyer', branch: 'Downtown', amount: '₹1,800' },
-      { date: 'Apr 24, 2025', service: 'Haircut & Blow Dry', staff: 'Priya Sharma', branch: 'Westside', amount: '₹1,100' },
-      { date: 'Apr 5, 2025', service: 'Pedicure', staff: 'Meera Kapoor', branch: 'Downtown', amount: '₹800' },
-    ],
-  },
-  {
-    id: '#C-006', name: 'Aryan Shah', initials: 'AS', phone: '+91 43210 98765',
-    email: 'aryan.shah@gmail.com', membership: 'Silver', points: 200, visits: 15,
-    lastVisit: '1 week ago', totalSpend: '₹24,800', memberSince: 'Apr 2023',
-    gradientFrom: '#1E40AF', gradientTo: '#3B82F6',
-    visitHistory: [
-      { date: 'May 19, 2025', service: 'Color Treatment', staff: 'Rahul Verma', branch: 'Downtown', amount: '₹2,500' },
-      { date: 'May 3, 2025', service: 'Haircut & Style', staff: 'Vikram D', branch: 'Downtown', amount: '₹1,000' },
-      { date: 'Apr 16, 2025', service: 'Hair Spa', staff: 'Priya Sharma', branch: 'Westside', amount: '₹1,600' },
-      { date: 'Mar 30, 2025', service: 'Beard Design', staff: 'Arjun T', branch: 'Downtown', amount: '₹500' },
-    ],
-  },
-  {
-    id: '#C-007', name: 'Divya Nair', initials: 'DN', phone: '+91 32109 87654',
-    email: 'divya.nair@gmail.com', membership: 'Gold', points: 560, visits: 38,
-    lastVisit: 'today', totalSpend: '₹71,200', memberSince: 'Jul 2020',
-    gradientFrom: '#7C3AED', gradientTo: '#EC4899',
-    visitHistory: [
-      { date: 'May 27, 2025', service: 'Keratin + Color', staff: 'Priya Sharma', branch: 'Downtown', amount: '₹6,500' },
-      { date: 'May 14, 2025', service: 'Nail Art Full Set', staff: 'Meera Kapoor', branch: 'Downtown', amount: '₹1,400' },
-      { date: 'Apr 30, 2025', service: 'Skin Brightening Facial', staff: 'Sneha Iyer', branch: 'Westside', amount: '₹2,800' },
-      { date: 'Apr 18, 2025', service: 'Hair Styling', staff: 'Vikram D', branch: 'Downtown', amount: '₹1,200' },
-    ],
-  },
-  {
-    id: '#C-008', name: 'Suresh P', initials: 'SP', phone: '+91 21098 76543',
-    email: 'suresh.p@gmail.com', membership: 'None', points: 20, visits: 2,
-    lastVisit: '1 month ago', totalSpend: '₹3,100', memberSince: 'Apr 2025',
-    gradientFrom: '#374151', gradientTo: '#6B7280',
-    visitHistory: [
-      { date: 'Apr 25, 2025', service: 'Haircut', staff: 'Rahul Verma', branch: 'Downtown', amount: '₹700' },
-      { date: 'Apr 10, 2025', service: 'Beard Trim', staff: 'Arjun T', branch: 'Downtown', amount: '₹400' },
-      { date: 'Mar 30, 2025', service: 'Haircut & Shampoo', staff: 'Vikram D', branch: 'Westside', amount: '₹900' },
-      { date: 'Mar 12, 2025', service: 'Basic Facial', staff: 'Sneha Iyer', branch: 'Downtown', amount: '₹1,100' },
-    ],
-  },
-]
+const EMPTY_CUSTOMERS: Customer[] = []
 
 // ─── Membership Badge ─────────────────────────────────────────────────────────
 const membershipConfig: Record<Membership, { label: string; className: string; dot: string }> = {
@@ -317,13 +219,86 @@ export function CustomerDatabase() {
   const [branchFilter, setBranchFilter] = useState('All')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [visible, setVisible] = useState(false)
+  const [customers, setCustomers] = useState<Customer[]>(EMPTY_CUSTOMERS)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [branchOptions, setBranchOptions] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
   }, [])
 
-  const filtered = CUSTOMERS.filter((c) => {
+  useEffect(() => {
+    let active = true
+
+    const fetchCustomers = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const [customersRes, branchesRes] = await Promise.all([
+          fetch('/api/customers'),
+          fetch('/api/branches'),
+        ])
+        if (!customersRes.ok || !branchesRes.ok) {
+          throw new Error('Failed to load customers')
+        }
+        const payload = await customersRes.json()
+        const branchesPayload = await branchesRes.json()
+        if (!active) return
+
+        const mapped = (payload.data ?? []).map((item: any, index: number) => {
+          const membership = (item.membershipTier ?? 'none').toLowerCase()
+          const membershipLabel = membership === 'gold'
+            ? 'Gold'
+            : membership === 'silver'
+            ? 'Silver'
+            : membership === 'bronze'
+            ? 'Bronze'
+            : 'None'
+
+          return {
+            id: item._id,
+            name: item.name,
+            initials: item.name
+              .split(' ')
+              .map((part: string) => part[0])
+              .join('')
+              .slice(0, 2),
+            phone: item.phone,
+            email: item.email ?? '',
+            membership: membershipLabel,
+            points: item.loyaltyPoints ?? 0,
+            visits: item.totalVisits ?? 0,
+            lastVisit: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-IN') : '—',
+            totalSpend: `₹${(item.totalSpend ?? 0).toLocaleString('en-IN')}`,
+            memberSince: item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '—',
+            gradientFrom: ['#2563EB', '#7C3AED', '#0D9488', '#F59E0B'][index % 4],
+            gradientTo: ['#7C3AED', '#EC4899', '#22C55E', '#F97316'][index % 4],
+            visitHistory: [],
+          } as Customer
+        })
+
+        setCustomers(mapped)
+        setBranchOptions(branchesPayload.data ?? [])
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load customers')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchCustomers()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const filtered = customers.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.phone.includes(search)
     const matchMember = memberFilter === 'All' || c.membership === memberFilter
@@ -336,7 +311,7 @@ export function CustomerDatabase() {
       <div className="px-6 pt-6 pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/5">
         <div>
           <h2 className="text-2xl font-bold text-foreground tracking-tight">Customer Database</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage your {CUSTOMERS.length.toLocaleString()} active clients across all branches.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage your {customers.length.toLocaleString()} active clients across all branches.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
@@ -372,8 +347,11 @@ export function CustomerDatabase() {
             className="bg-[#1C1F2A] border border-white/8 rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 appearance-none cursor-pointer"
           >
             <option value="All">All Branches</option>
-            <option value="Downtown">Downtown</option>
-            <option value="Westside">Westside</option>
+            {branchOptions.map((branch) => (
+              <option key={branch.id ?? branch._id ?? branch.name} value={branch.name}>
+                {branch.name}
+              </option>
+            ))}
           </select>
           {/* Add Customer */}
           <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-all shadow-[0_0_12px_rgba(37,99,235,0.3)]">
@@ -385,6 +363,11 @@ export function CustomerDatabase() {
 
       {/* Table */}
       <div className="flex-1 overflow-auto px-6 py-4">
+        {error && (
+          <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">
+            {error}
+          </div>
+        )}
         <div className="bg-card rounded-xl border border-white/5 overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -397,7 +380,14 @@ export function CustomerDatabase() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((customer, i) => (
+              {loading && (
+                <tr>
+                  <td colSpan={8} className="py-8 px-4">
+                    <div className="h-24 rounded-lg bg-[#1C1F2A]/60 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+              {!loading && filtered.map((customer, i) => (
                 <motion.tr
                   key={customer.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -471,6 +461,13 @@ export function CustomerDatabase() {
                   </td>
                 </motion.tr>
               ))}
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="py-10 text-center text-muted-foreground text-sm">
+                    No customers match your filters.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
 

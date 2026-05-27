@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { SidebarNavItem } from "./sidebar-nav-item"
 import { cn } from "@/lib/utils"
+import { useBranch } from "@/context/BranchContext"
 
 const NAV_ITEMS = [
   { id: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -33,11 +34,6 @@ const NAV_ITEMS = [
   { id: "/reports", label: "Reports", icon: BarChart3 },
 ]
 
-const BRANCHES = [
-  { id: "downtown", label: "Downtown Branch" },
-  { id: "uptown", label: "Uptown Branch" },
-  { id: "mall", label: "City Mall Branch" },
-]
 
 // Context for new booking modal
 interface NewBookingContextValue {
@@ -60,7 +56,8 @@ interface SidebarProps {
 
 export function Sidebar({ activePage, collapsed = false, onToggleCollapse, onNewAppointment }: SidebarProps) {
   const [branchOpen, setBranchOpen] = useState(false)
-  const [activeBranch, setActiveBranch] = useState(BRANCHES[0])
+  const { activeBranch, setActiveBranch, branches, loading, error } = useBranch()
+  const activeLabel = activeBranch?.name ?? "Select Branch"
 
   return (
     <aside 
@@ -117,7 +114,7 @@ export function Sidebar({ activePage, collapsed = false, onToggleCollapse, onNew
                 aria-label="Active branch"
               />
               <span className="font-medium text-text-primary">
-                {activeBranch.label}
+                {activeLabel}
               </span>
             </div>
             <ChevronDown
@@ -135,19 +132,25 @@ export function Sidebar({ activePage, collapsed = false, onToggleCollapse, onNew
               aria-label="Select branch"
               className="absolute left-3 right-3 top-full z-50 mt-1 rounded-lg border border-border bg-bg-elevated shadow-xl"
             >
-              {BRANCHES.map((branch) => (
+              {loading ? (
+                <div className="px-3 py-2.5 text-xs text-text-muted">Loading branches...</div>
+              ) : error ? (
+                <div className="px-3 py-2.5 text-xs text-danger">{error}</div>
+              ) : branches.length === 0 ? (
+                <div className="px-3 py-2.5 text-xs text-text-muted">No branches available</div>
+              ) : branches.map((branch) => (
                 <button
                   key={branch.id}
                   role="option"
-                  aria-selected={branch.id === activeBranch.id}
+                  aria-selected={branch.id === activeBranch?.id}
                   onClick={() => {
                     setActiveBranch(branch)
                     setBranchOpen(false)
                   }}
                   className="flex w-full items-center justify-between px-3 py-2.5 text-sm text-text-muted transition-colors first:rounded-t-lg last:rounded-b-lg hover:bg-bg-primary hover:text-text-primary"
                 >
-                  {branch.label}
-                  {branch.id === activeBranch.id && (
+                  {branch.name}
+                  {branch.id === activeBranch?.id && (
                     <CheckCircle2 size={14} className="text-primary" />
                   )}
                 </button>

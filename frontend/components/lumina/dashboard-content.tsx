@@ -172,60 +172,16 @@ function StatCard({
 // ─────────────────────────────────────────────────────────────
 // TODAY'S SCHEDULE COMPONENT
 // ─────────────────────────────────────────────────────────────
-const STAFF_SCHEDULE = [
-  {
-    name: 'Priya',
-    avatar: 'P',
-    color: '#2563EB',
-    slots: [
-      { start: 9, end: 10.5, service: 'Haircut', customer: 'Anjali M.' },
-      { start: 11, end: 12, service: 'Color', customer: 'Sneha R.' },
-      { start: 14, end: 15.5, service: 'Balayage', customer: 'Kavya P.' },
-    ],
-  },
-  {
-    name: 'Rahul',
-    avatar: 'R',
-    color: '#7C3AED',
-    slots: [
-      { start: 10, end: 11, service: 'Beard Trim', customer: 'Arjun K.' },
-      { start: 13, end: 14.5, service: 'Haircut', customer: 'Vikram S.' },
-    ],
-  },
-  {
-    name: 'Sneha',
-    avatar: 'S',
-    color: '#0D9488',
-    slots: [
-      { start: 9.5, end: 10.5, service: 'Facial', customer: 'Preethi M.' },
-      { start: 12, end: 13, service: 'Cleanup', customer: 'Divya K.' },
-      { start: 15, end: 16.5, service: 'Facial', customer: 'Meera R.' },
-    ],
-  },
-  {
-    name: 'Vikram',
-    avatar: 'V',
-    color: '#F59E0B',
-    slots: [
-      { start: 10.5, end: 12, service: 'Hair Spa', customer: 'Rohan P.' },
-      { start: 14, end: 15, service: 'Haircut', customer: 'Kiran T.' },
-    ],
-  },
-  {
-    name: 'Meera',
-    avatar: 'M',
-    color: '#EC4899',
-    slots: [
-      { start: 9, end: 10, service: 'Manicure', customer: 'Lakshmi S.' },
-      { start: 11.5, end: 13, service: 'Pedicure', customer: 'Ananya G.' },
-      { start: 16, end: 17, service: 'Nail Art', customer: 'Riya M.' },
-    ],
-  },
-]
+type StaffScheduleItem = {
+  name: string
+  avatar: string
+  color: string
+  slots: { start: number; end: number; service: string; customer: string }[]
+}
 
 const TIME_SLOTS = [9, 10, 11, 12, 13, 14, 15, 16, 17]
 
-function TodaysSchedule() {
+function TodaysSchedule({ schedule, loading }: { schedule: StaffScheduleItem[]; loading: boolean }) {
   const [tooltip, setTooltip] = useState<{
     x: number
     y: number
@@ -271,7 +227,9 @@ function TodaysSchedule() {
 
       {/* Staff rows */}
       <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-2">
-        {STAFF_SCHEDULE.map((staff) => (
+        {loading && schedule.length === 0 ? (
+          <div className="h-32 rounded-lg bg-bg-card/50 animate-pulse" />
+        ) : schedule.map((staff) => (
           <div key={staff.name} className="flex items-center gap-3">
             {/* Avatar + name */}
             <div className="flex items-center gap-2 w-16 shrink-0">
@@ -352,66 +310,15 @@ function TodaysSchedule() {
 // ─────────────────────────────────────────────────────────────
 // LIVE ACTIVITY FEED
 // ─────────────────────────────────────────────────────────────
-const ACTIVITY_FEED = [
-  {
-    icon: Calendar,
-    iconColor: '#2563EB',
-    text: 'Anjali booked Haircut',
-    sub: 'Banjara Hills',
-    time: '2m ago',
-  },
-  {
-    icon: FileText,
-    iconColor: '#22C55E',
-    text: 'Invoice #1042 generated',
-    sub: '₹2,400',
-    time: '5m ago',
-  },
-  {
-    icon: Package,
-    iconColor: '#F59E0B',
-    text: 'Low stock: Hair Serum',
-    sub: '2 items left',
-    time: '12m ago',
-  },
-  {
-    icon: UserPlus,
-    iconColor: '#2563EB',
-    text: 'Walk-in added',
-    sub: 'Rahul M',
-    time: '18m ago',
-  },
-  {
-    icon: X,
-    iconColor: '#EF4444',
-    text: 'Preethi cancelled',
-    sub: 'Appointment',
-    time: '25m ago',
-  },
-  {
-    icon: Star,
-    iconColor: '#7C3AED',
-    text: 'Commission unlocked',
-    sub: 'Priya ₹960',
-    time: '32m ago',
-  },
-  {
-    icon: Users,
-    iconColor: '#22C55E',
-    text: 'New customer registered',
-    sub: 'Kiran T',
-    time: '45m ago',
-  },
-  {
-    icon: CheckCircle,
-    iconColor: '#22C55E',
-    text: 'Invoice #1041 paid',
-    sub: '₹1,800',
-    time: '1h ago',
-  },
-]
+type ActivityItem = {
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>
+  iconColor: string
+  text: string
+  sub: string
+  time: string
+}
 
-function LiveActivityFeed() {
+function LiveActivityFeed({ items, loading }: { items: ActivityItem[]; loading: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -430,7 +337,9 @@ function LiveActivityFeed() {
 
       {/* Feed items */}
       <div className="flex-1 overflow-y-auto flex flex-col gap-1 pr-1">
-        {ACTIVITY_FEED.map((item, i) => (
+        {loading && items.length === 0 ? (
+          <div className="h-40 rounded-lg bg-bg-card/50 animate-pulse" />
+        ) : items.map((item, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, x: 20 }}
@@ -462,14 +371,9 @@ function LiveActivityFeed() {
 // ─────────────────────────────────────────────────────────────
 // TOP SERVICES DONUT
 // ─────────────────────────────────────────────────────────────
-const TOP_SERVICES = [
-  { name: 'Hair', value: 42, color: '#2563EB' },
-  { name: 'Skin', value: 28, color: '#7C3AED' },
-  { name: 'Nails', value: 18, color: '#0D9488' },
-  { name: 'Spa', value: 12, color: '#F59E0B' },
-]
+type TopServiceItem = { name: string; value: number; color: string }
 
-function TopServicesDonut() {
+function TopServicesDonut({ services, loading }: { services: TopServiceItem[]; loading: boolean }) {
   const radius = 40
   const circumference = 2 * Math.PI * radius
 
@@ -488,7 +392,7 @@ function TopServicesDonut() {
           <svg viewBox="0 0 100 100" className="transform -rotate-90">
             {(() => {
               let cumulativePercent = 0
-              return TOP_SERVICES.map((service) => {
+              return services.map((service) => {
                 const strokeDasharray = (service.value / 100) * circumference
                 const strokeDashoffset = -(cumulativePercent / 100) * circumference
                 cumulativePercent += service.value
@@ -517,7 +421,9 @@ function TopServicesDonut() {
 
         {/* Legend */}
         <div className="flex flex-col gap-2">
-          {TOP_SERVICES.map((service) => (
+          {loading && services.length === 0 ? (
+            <div className="h-20 w-full rounded-lg bg-bg-card/50 animate-pulse" />
+          ) : services.map((service) => (
             <div key={service.name} className="flex items-center gap-2">
               <div
                 className="h-3 w-3 rounded-full"
@@ -538,13 +444,9 @@ function TopServicesDonut() {
 // ─────────────────────────────────────────────────────────────
 // BRANCH PERFORMANCE
 // ─────────────────────────────────────────────────────────────
-const BRANCHES = [
-  { name: 'Banjara Hills', revenue: 140000, percent: 88, color: '#2563EB' },
-  { name: 'Jubilee Hills', revenue: 110000, percent: 71, color: '#7C3AED' },
-  { name: 'Madhapur', revenue: 80000, percent: 52, color: '#0D9488' },
-]
+type BranchPerformanceItem = { name: string; revenue: number; percent: number; color: string }
 
-function BranchPerformance() {
+function BranchPerformance({ branches, loading }: { branches: BranchPerformanceItem[]; loading: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -555,7 +457,9 @@ function BranchPerformance() {
       <h3 className="text-base font-semibold text-text-primary mb-4">Branch Performance</h3>
 
       <div className="flex flex-col gap-4">
-        {BRANCHES.map((branch, i) => (
+        {loading && branches.length === 0 ? (
+          <div className="h-20 rounded-lg bg-bg-card/50 animate-pulse" />
+        ) : branches.map((branch, i) => (
           <div key={branch.name}>
             <div className="flex justify-between items-center mb-1.5">
               <span className="text-sm text-text-primary">{branch.name}</span>
@@ -582,15 +486,9 @@ function BranchPerformance() {
 // ─────────────────────────────────────────────────────────────
 // STAFF ON DUTY
 // ─────────────────────────────────────────────────────────────
-const STAFF_ON_DUTY = [
-  { name: 'Priya', avatar: 'P', status: 'In Session', statusColor: '#22C55E', next: '11:00' },
-  { name: 'Rahul', avatar: 'R', status: 'Available', statusColor: '#2563EB', next: '11:00' },
-  { name: 'Sneha', avatar: 'S', status: 'Break', statusColor: '#F59E0B', next: '12:00' },
-  { name: 'Vikram', avatar: 'V', status: 'In Session', statusColor: '#22C55E', next: '13:00' },
-  { name: 'Meera', avatar: 'M', status: 'Available', statusColor: '#2563EB', next: '14:00' },
-]
+type StaffOnDutyItem = { name: string; avatar: string; status: string; statusColor: string; next: string }
 
-function StaffOnDuty() {
+function StaffOnDuty({ staff, loading }: { staff: StaffOnDutyItem[]; loading: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -601,7 +499,9 @@ function StaffOnDuty() {
       <h3 className="text-base font-semibold text-text-primary mb-4">Staff On Duty</h3>
 
       <div className="flex flex-col gap-3">
-        {STAFF_ON_DUTY.map((staff, i) => (
+        {loading && staff.length === 0 ? (
+          <div className="h-20 rounded-lg bg-bg-card/50 animate-pulse" />
+        ) : staff.map((staff, i) => (
           <motion.div
             key={staff.name}
             initial={{ opacity: 0, x: -10 }}
@@ -634,13 +534,159 @@ function StaffOnDuty() {
 // MAIN DASHBOARD CONTENT
 // ─────────────────────────────────────────────────────────────
 export function DashboardContent() {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [branches, setBranches] = useState<any[]>([])
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [staff, setStaff] = useState<any[]>([])
+
+  useEffect(() => {
+    let active = true
+
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const today = new Date().toISOString()
+        const [branchesRes, appointmentsRes, invoicesRes, staffRes] = await Promise.all([
+          fetch('/api/branches'),
+          fetch(`/api/appointments?date=${today}`),
+          fetch('/api/invoices'),
+          fetch('/api/users'),
+        ])
+
+        if (!branchesRes.ok || !appointmentsRes.ok || !invoicesRes.ok || !staffRes.ok) {
+          throw new Error('Failed to load dashboard data')
+        }
+
+        const branchesPayload = await branchesRes.json()
+        const appointmentsPayload = await appointmentsRes.json()
+        const invoicesPayload = await invoicesRes.json()
+        const staffPayload = await staffRes.json()
+
+        if (!active) return
+        setBranches(branchesPayload.data ?? [])
+        setAppointments(appointmentsPayload.data ?? [])
+        setInvoices(invoicesPayload.data ?? [])
+        setStaff(staffPayload.data ?? [])
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchData()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total ?? 0), 0)
+  const totalAppointments = appointments.length
+  const walkIns = appointments.filter((apt) => apt.channel === 'walkin').length
+  const pendingCount = appointments.filter((apt) => apt.status === 'pending').length
+
+  const staffMap = new Map(staff.map((member) => [member._id, member]))
+  const scheduleColors = ['#2563EB', '#7C3AED', '#0D9488', '#F59E0B', '#EC4899']
+  const schedule = Object.values(
+    appointments.reduce<Record<string, StaffScheduleItem>>((acc, appt, index) => {
+      const staffId = appt.staffId?._id ?? appt.staffId
+      if (!staffId) return acc
+      if (!acc[staffId]) {
+        const staffMember = staffMap.get(staffId)
+        acc[staffId] = {
+          name: staffMember?.name ?? 'Staff',
+          avatar: (staffMember?.name ?? 'S').slice(0, 1),
+          color: scheduleColors[index % scheduleColors.length],
+          slots: [],
+        }
+      }
+      const slot = new Date(appt.slot)
+      const duration = appt.duration ?? appt.serviceId?.duration ?? 30
+      const start = slot.getHours() + slot.getMinutes() / 60
+      const end = start + duration / 60
+      acc[staffId].slots.push({
+        start,
+        end,
+        service: appt.serviceId?.name ?? 'Service',
+        customer: appt.customerId?.name ?? 'Customer',
+      })
+      return acc
+    }, {})
+  )
+
+  const activityItems: ActivityItem[] = [
+    ...appointments.slice(0, 3).map((apt: any) => ({
+      icon: Calendar,
+      iconColor: '#2563EB',
+      text: `${apt.customerId?.name ?? 'Customer'} booked ${apt.serviceId?.name ?? 'Service'}`,
+      sub: apt.branchId?.name ?? 'Branch',
+      time: 'just now',
+    })),
+    ...invoices.slice(0, 2).map((inv: any) => ({
+      icon: FileText,
+      iconColor: '#22C55E',
+      text: `Invoice ${inv.invoiceNumber ?? ''} generated`,
+      sub: `₹${(inv.total ?? 0).toLocaleString('en-IN')}`,
+      time: 'recent',
+    })),
+  ]
+
+  const serviceTotals = appointments.reduce<Record<string, number>>((acc, apt) => {
+    const category = apt.serviceId?.category ?? 'Other'
+    acc[category] = (acc[category] ?? 0) + 1
+    return acc
+  }, {})
+  const totalServiceCount = Object.values(serviceTotals).reduce((sum, val) => sum + val, 0) || 1
+  const topServices: TopServiceItem[] = Object.entries(serviceTotals).map(([name, value], index) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    value: Math.round((value / totalServiceCount) * 100),
+    color: scheduleColors[index % scheduleColors.length],
+  }))
+
+  const branchTotals = invoices.reduce<Record<string, number>>((acc, inv) => {
+    const branchId = inv.branchId?._id ?? inv.branchId
+    acc[branchId] = (acc[branchId] ?? 0) + (inv.total ?? 0)
+    return acc
+  }, {})
+  const branchPerformance: BranchPerformanceItem[] = branches.map((branch: any, index: number) => {
+    const revenue = branchTotals[branch._id] ?? 0
+    const maxRevenue = Math.max(...Object.values(branchTotals), 1)
+    const percent = Math.round((revenue / maxRevenue) * 100)
+    return {
+      name: branch.name,
+      revenue,
+      percent,
+      color: scheduleColors[index % scheduleColors.length],
+    }
+  })
+
+  const staffOnDuty: StaffOnDutyItem[] = staff.slice(0, 5).map((member: any, index: number) => ({
+    name: member.name,
+    avatar: member.name?.slice(0, 1) ?? 'S',
+    status: member.isActive ? 'Available' : 'Off',
+    statusColor: member.isActive ? '#2563EB' : '#64748B',
+    next: '—',
+  }))
+
   return (
     <div className="flex flex-col gap-6">
+      {error && (
+        <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">
+          {error}
+        </div>
+      )}
       {/* Row 1: Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Revenue"
-          value={42500}
+          value={totalRevenue}
           prefix="₹"
           trend="up"
           trendValue="12.5%"
@@ -651,7 +697,7 @@ export function DashboardContent() {
         />
         <StatCard
           title="Appointments"
-          value={124}
+          value={totalAppointments}
           trend="up"
           trendValue="4.2%"
           icon={<Calendar size={20} />}
@@ -661,7 +707,7 @@ export function DashboardContent() {
         />
         <StatCard
           title="Walk-ins"
-          value={18}
+          value={walkIns}
           trend="down"
           trendValue="2.1%"
           icon={<Footprints size={20} />}
@@ -671,7 +717,7 @@ export function DashboardContent() {
         />
         <StatCard
           title="Pending Confirmation"
-          value={7}
+          value={pendingCount}
           icon={<Clock size={20} />}
           accentColor="#F59E0B"
           delay={0.3}
@@ -696,15 +742,15 @@ export function DashboardContent() {
 
       {/* Row 2: Calendar & Live Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <TodaysSchedule />
-        <LiveActivityFeed />
+        <TodaysSchedule schedule={schedule} loading={loading} />
+        <LiveActivityFeed items={activityItems} loading={loading} />
       </div>
 
       {/* Row 3: Services, Branch Performance, Staff */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <TopServicesDonut />
-        <BranchPerformance />
-        <StaffOnDuty />
+        <TopServicesDonut services={topServices} loading={loading} />
+        <BranchPerformance branches={branchPerformance} loading={loading} />
+        <StaffOnDuty staff={staffOnDuty} loading={loading} />
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Phone, Send, UserCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 type ConvStatus = 'active' | 'waiting' | 'completed' | 'failed'
 
 interface Conversation {
-  id: number
+  id: string
   name: string
   initials: string
   phone: string
@@ -22,7 +22,7 @@ interface Conversation {
 }
 
 interface Message {
-  id: number
+  id: string
   role: 'bot' | 'user'
   text: string
   chips?: string[]
@@ -30,52 +30,117 @@ interface Message {
   timestamp?: string
 }
 
-const CONVERSATIONS: Conversation[] = [
-  { id: 1, name: 'Anjali Singh', initials: 'AS', phone: '98765 43210', preview: 'What time is 3pm slot available', time: '2m ago', status: 'active', membership: 'Gold' },
-  { id: 2, name: 'Rahul M', initials: 'RM', phone: '87654 32109', preview: 'Can I reschedule to tomorrow', time: '15m ago', status: 'waiting' },
-  { id: 3, name: 'Preethi K', initials: 'PK', phone: '76543 21098', preview: 'Booking confirmed, thank you!', time: '1h ago', status: 'completed' },
-  { id: 4, name: 'Kiran R', initials: 'KR', phone: '65432 10987', preview: 'Which branch is open Sunday', time: '2h ago', status: 'active' },
-  { id: 5, name: 'Meera J', initials: 'MJ', phone: '54321 09876', preview: 'Book facial for tomorrow morning', time: '3h ago', status: 'waiting' },
-  { id: 6, name: 'Suresh P', initials: 'SP', phone: '21098 76543', preview: 'Unable to process your request', time: '5h ago', status: 'failed' },
-]
+interface SessionItem {
+  _id: string
+  phone: string
+  customerId?: { name?: string; phone?: string; membershipTier?: string }
+  step: string
+  context?: Record<string, any>
+  isActive: boolean
+  lastMessageAt?: string
+  updatedAt?: string
+}
 
-const CHAT_MESSAGES: Message[] = [
-  {
-    id: 1, role: 'bot',
-    text: 'Hi Anjali! Welcome to Luminous. Which branch would you prefer?',
-    chips: ['Banjara Hills', 'Jubilee Hills', 'Madhapur'],
-    timestamp: 'Today 2:28 PM',
-  },
-  { id: 2, role: 'user', text: 'Banjara Hills' },
-  {
-    id: 3, role: 'bot',
-    text: 'Perfect! What service are you looking for today?',
-    chips: ['Haircut', 'Hair Color', 'Hair Spa', 'Other'],
-  },
-  { id: 4, role: 'user', text: 'Haircut please' },
-  {
-    id: 5, role: 'bot',
-    text: 'Great choice! Here are available slots for tomorrow at Banjara Hills:',
-    slotChips: [
-      { label: '10:00 AM', available: true },
-      { label: '11:30 AM', available: true },
-      { label: '2:00 PM', available: true },
-      { label: '4:30 PM', available: true },
-    ],
-  },
-  { id: 6, role: 'user', text: 'What about 3pm?', timestamp: 'Today 2:34 PM' },
-  {
-    id: 7, role: 'bot',
-    text: '3:00 PM isn\'t available, but I have 2:00 PM and 4:30 PM open. Which works better for you?',
-  },
-]
+const EMPTY_CONVERSATIONS: Conversation[] = []
+const EMPTY_MESSAGES: Message[] = []
+const STEP_LABELS = ['Branch', 'Service', 'Slot', 'Confirm']
 
-const BOOKING_STEPS = [
-  { label: 'Branch', done: true },
-  { label: 'Service', done: true },
-  { label: 'Slot', done: false, active: true },
-  { label: 'Confirm', done: false },
-]
+function formatRelativeTime(value?: string) {
+  if (!value) return '—'
+  const date = new Date(value)
+  const diffMs = Date.now() - date.getTime()
+  const minutes = Math.max(1, Math.round(diffMs / 60000))
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.round(hours / 24)
+  return `${days}d ago`
+}
+
+function formatMembership(value?: string) {
+  if (!value || value === 'none') return undefined
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function getPreview(step: string) {
+  switch (step) {
+    case 'branch_selected':
+      return 'Awaiting branch selection'
+    case 'service_selected':
+      return 'Awaiting service selection'
+    case 'date_selected':
+      return 'Awaiting preferred date'
+    case 'slot_selected':
+      return 'Awaiting slot confirmation'
+    case 'details_collected':
+      return 'Awaiting confirmation'
+    case 'completed':
+      return 'Booking completed'
+    default:
+      return 'New conversation'
+  }
+}
+
+function getStatus(step: string, isActive: boolean): ConvStatus {
+  if (!isActive) return 'failed'
+  if (step === 'completed') return 'completed'
+  return 'active'
+}
+
+function getStepIndex(step: string) {
+  switch (step) {
+    case 'service_selected':
+      return 1
+    case 'date_selected':
+    case 'slot_selected':
+      return 2
+    case 'details_collected':
+    case 'completed':
+      return 3
+    default:
+      return 0
+  }
+}
+
+function buildSteps(step: string) {
+  const activeIndex = getStepIndex(step)
+  return STEP_LABELS.map((label, index) => ({
+    label,
+    done: index < activeIndex || (step === 'completed' && index <= activeIndex),
+    active: index === activeIndex && step !== 'completed',
+  }))
+}
+
+function buildMessages(session?: SessionItem): Message[] {
+  if (!session) return []
+  const context = session.context ?? {}
+  const messages: Message[] = []
+
+  messages.push({
+    id: 'bot-welcome',
+    role: 'bot',
+    text: 'Welcome to Luminous. I can help you book an appointment.',
+    timestamp: session.lastMessageAt
+      ? new Date(session.lastMessageAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
+      : undefined,
+  })
+
+  if (context.branchName) {
+    messages.push({ id: 'user-branch', role: 'user', text: String(context.branchName) })
+  }
+
+  if (context.serviceName) {
+    messages.push({ id: 'user-service', role: 'user', text: String(context.serviceName) })
+  }
+
+  messages.push({
+    id: 'bot-step',
+    role: 'bot',
+    text: getPreview(session.step),
+  })
+
+  return messages
+}
 
 const STATUS_CONFIG: Record<ConvStatus, { dot: string; label: string; pulse: boolean; chipColor: string; chipBg: string; chipBorder: string }> = {
   active: { dot: 'bg-primary', label: 'Active', pulse: true, chipColor: 'text-primary', chipBg: 'bg-primary/10', chipBorder: 'border-primary/25' },
@@ -213,13 +278,82 @@ function ChatBubble({ msg, index }: { msg: Message; index: number }) {
 // MAIN WHATSAPP MONITOR COMPONENT
 // ─────────────────────────────────────────────────────────────
 export function WhatsAppMonitor() {
-  const [selectedId, setSelectedId] = useState(1)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [takenOver, setTakenOver] = useState(false)
   const [manualMsg, setManualMsg] = useState('')
+  const [sessions, setSessions] = useState<SessionItem[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>(EMPTY_CONVERSATIONS)
+  const [messages, setMessages] = useState<Message[]>(EMPTY_MESSAGES)
+  const [steps, setSteps] = useState<{ label: string; done?: boolean; active?: boolean }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const selected = CONVERSATIONS.find((c) => c.id === selectedId)!
-  const filtered = CONVERSATIONS.filter(
+  useEffect(() => {
+    let active = true
+
+    const fetchSessions = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const res = await fetch('/api/sessions')
+        if (!res.ok) {
+          throw new Error('Failed to load conversations')
+        }
+        const payload = await res.json()
+        if (!active) return
+        const nextSessions = payload.data ?? []
+        setSessions(nextSessions)
+
+        const mapped = nextSessions.map((session: SessionItem) => {
+          const name = session.customerId?.name ?? 'Guest'
+          const initials = name
+            .split(' ')
+            .map((part) => part[0])
+            .join('')
+            .slice(0, 2)
+          return {
+            id: session._id,
+            name,
+            initials,
+            phone: session.phone,
+            preview: getPreview(session.step),
+            time: formatRelativeTime(session.lastMessageAt ?? session.updatedAt),
+            status: getStatus(session.step, session.isActive),
+            membership: formatMembership(session.customerId?.membershipTier),
+          }
+        })
+
+        setConversations(mapped)
+
+        if (!selectedId && mapped.length > 0) {
+          setSelectedId(mapped[0].id)
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load conversations')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchSessions()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const selectedSession = sessions.find((session) => session._id === selectedId)
+    setMessages(buildMessages(selectedSession))
+    setSteps(buildSteps(selectedSession?.step ?? 'init'))
+  }, [sessions, selectedId])
+
+  const selected = conversations.find((c) => c.id === selectedId)
+  const filtered = conversations.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.phone.includes(search)
@@ -250,16 +384,32 @@ export function WhatsAppMonitor() {
           </div>
         </div>
 
+        {error && (
+          <div className="mx-3 mt-3 rounded-lg border border-danger/30 bg-danger/10 px-2.5 py-1.5 text-[10px] text-danger">
+            {error}
+          </div>
+        )}
+
         {/* List */}
         <div className="flex-1 overflow-y-auto">
-          {filtered.map((conv) => (
-            <ConvItem
-              key={conv.id}
-              conv={conv}
-              selected={conv.id === selectedId}
-              onClick={() => setSelectedId(conv.id)}
-            />
-          ))}
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-16 border-b border-white/[0.04] px-3 py-3">
+                <div className="h-10 rounded-lg bg-bg-card/60 animate-pulse" />
+              </div>
+            ))
+          ) : filtered.length === 0 ? (
+            <div className="px-3 py-6 text-[11px] text-text-muted">No conversations found.</div>
+          ) : (
+            filtered.map((conv) => (
+              <ConvItem
+                key={conv.id}
+                conv={conv}
+                selected={conv.id === selectedId}
+                onClick={() => setSelectedId(conv.id)}
+              />
+            ))
+          )}
         </div>
       </aside>
 
@@ -267,34 +417,48 @@ export function WhatsAppMonitor() {
       <section className="flex-1 flex flex-col bg-bg-primary min-w-0 overflow-hidden">
         {/* Top bar */}
         <header className="h-14 border-b border-white/5 px-4 flex items-center justify-between bg-bg-primary/90 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-2">
-            <Avatar initials={selected.initials} size="sm" />
-            <div>
+          {selected ? (
+            <>
               <div className="flex items-center gap-2">
-                <h2 className="text-xs font-semibold text-text-primary">{selected.name}</h2>
-                {selected.membership && (
-                  <span className="rounded-full bg-warning/15 border border-warning/30 px-1.5 py-0.5 text-[9px] font-semibold text-warning">
-                    {selected.membership}
-                  </span>
-                )}
+                <Avatar initials={selected.initials} size="sm" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xs font-semibold text-text-primary">{selected.name}</h2>
+                    {selected.membership && (
+                      <span className="rounded-full bg-warning/15 border border-warning/30 px-1.5 py-0.5 text-[9px] font-semibold text-warning">
+                        {selected.membership}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-text-muted flex items-center gap-1 mt-0.5">
+                    <Phone size={9} />
+                    +91 {selected.phone}
+                  </p>
+                </div>
               </div>
-              <p className="text-[10px] text-text-muted flex items-center gap-1 mt-0.5">
-                <Phone size={9} />
-                +91 {selected.phone}
-              </p>
-            </div>
-          </div>
-          <button className="flex items-center gap-1 rounded-lg border border-border bg-bg-card px-2 py-1.5 text-[10px] text-text-muted hover:text-text-primary hover:border-white/15 transition-colors">
-            <UserCircle size={12} />
-            Open Profile
-          </button>
+              <button className="flex items-center gap-1 rounded-lg border border-border bg-bg-card px-2 py-1.5 text-[10px] text-text-muted hover:text-text-primary hover:border-white/15 transition-colors">
+                <UserCircle size={12} />
+                Open Profile
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-text-muted">Select a conversation</p>
+          )}
         </header>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2">
-          {CHAT_MESSAGES.map((msg, i) => (
-            <ChatBubble key={msg.id} msg={msg} index={i} />
-          ))}
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-12 rounded-lg bg-bg-card/60 animate-pulse" />
+            ))
+          ) : messages.length === 0 ? (
+            <div className="text-[11px] text-text-muted">No messages to display.</div>
+          ) : (
+            messages.map((msg, i) => (
+              <ChatBubble key={msg.id} msg={msg} index={i} />
+            ))
+          )}
         </div>
 
         {/* Status bar + take over */}
@@ -305,7 +469,7 @@ export function WhatsAppMonitor() {
               Step 3 of 4: Awaiting slot confirmation
             </p>
             <div className="flex items-center gap-0">
-              {BOOKING_STEPS.map((step, i) => (
+              {steps.map((step, i) => (
                 <div key={step.label} className="flex items-center flex-1">
                   <div className="flex flex-col items-center">
                     <div
@@ -329,7 +493,7 @@ export function WhatsAppMonitor() {
                       {step.label}
                     </span>
                   </div>
-                  {i < BOOKING_STEPS.length - 1 && (
+                  {i < STEP_LABELS.length - 1 && (
                     <div className={cn('flex-1 h-px mx-1', step.done ? 'bg-success/40' : 'bg-border')} />
                   )}
                 </div>

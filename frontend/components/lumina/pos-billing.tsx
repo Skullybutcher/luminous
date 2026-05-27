@@ -1,30 +1,27 @@
 "use client"
 
-import { useState, useCallback, createContext, useContext } from "react"
+import { useState, useCallback, createContext, useContext, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ShoppingCart, X } from "lucide-react"
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 
-const CATEGORIES = ["All", "Hair", "Skin", "Nails", "Spa", "Products"]
+const CATEGORIES = ["All"]
 
-const SERVICES = [
-  { id: 1, name: "Haircut", category: "Hair",     duration: "45 min", price: 800,  accent: "#3B82F6" },
-  { id: 2, name: "Hair Color", category: "Hair",  duration: "90 min", price: 2500, accent: "#A855F7" },
-  { id: 3, name: "Facial",     category: "Skin",  duration: "60 min", price: 1200, accent: "#EC4899" },
-  { id: 4, name: "Manicure",   category: "Nails", duration: "30 min", price: 600,  accent: "#F97316" },
-  { id: 5, name: "Head Massage", category: "Spa", duration: "30 min", price: 500,  accent: "#22C55E" },
-  { id: 6, name: "Pedicure",   category: "Nails", duration: "45 min", price: 700,  accent: "#F97316" },
-  { id: 7, name: "Keratin Treatment", category: "Hair", duration: "90 min", price: 3200, accent: "#A855F7" },
-  { id: 8, name: "Waxing",     category: "Skin",  duration: "30 min", price: 400,  accent: "#EC4899" },
-  { id: 9, name: "Spa Package", category: "Spa",  duration: "120 min", price: 3500, accent: "#22C55E" },
-]
+const SERVICES: Array<{
+  id: string
+  name: string
+  category: string
+  duration: string
+  price: number
+  accent: string
+}> = []
 
-const STAFF = ["Priya", "Sneha", "Meera", "Kavya"]
+const STAFF: string[] = []
 
 type CartItem = {
   uid: string
-  serviceId: number
+  serviceId: string
   name: string
   price: number
   staff: string
@@ -308,6 +305,7 @@ interface CurrentBillPanelProps {
   removeFromCart: (uid: string) => void
   updateStaff: (uid: string, staff: string) => void
   onGenerateInvoice: () => void
+  staffOptions: string[]
 }
 
 function CurrentBillPanel({
@@ -325,6 +323,7 @@ function CurrentBillPanel({
   removeFromCart,
   updateStaff,
   onGenerateInvoice,
+  staffOptions,
 }: CurrentBillPanelProps) {
   return (
     <AnimatePresence>
@@ -400,7 +399,7 @@ function CurrentBillPanel({
                             onChange={e => updateStaff(item.uid, e.target.value)}
                             className="bg-transparent text-[11px] text-primary font-semibold outline-none cursor-pointer border-none p-0 hover:text-blue-400 transition-colors"
                           >
-                            {STAFF.map(s => (
+                            {staffOptions.map(s => (
                               <option key={s} value={s} className="bg-[#1C1F2A] text-foreground">{s}</option>
                             ))}
                           </select>
@@ -565,6 +564,14 @@ export function POSBilling() {
   const [showInvoice, setShowInvoice]       = useState(false)
   const [searchFocused, setSearchFocused]   = useState(false)
   const [billPanelOpen, setBillPanelOpen]   = useState(false)
+  const [services, setServices]             = useState<typeof SERVICES>([])
+  const [staffList, setStaffList]           = useState<string[]>([])
+  const [customerQuery, setCustomerQuery]   = useState('')
+  const [customer, setCustomer]             = useState<any>(null)
+  const [loading, setLoading]               = useState(true)
+  const [error, setError]                   = useState<string | null>(null)
+  const [customerLoading, setCustomerLoading] = useState(false)
+  const [customerError, setCustomerError]     = useState<string | null>(null)
 
   // Calculations
   const subtotal  = cart.reduce((s, i) => s + i.price, 0)
@@ -574,6 +581,96 @@ export function POSBilling() {
   const gst       = taxable * GST_RATE
   const total     = taxable + gst
 
+  useEffect(() => {
+    let active = true
+
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const [servicesRes, staffRes] = await Promise.all([
+          fetch('/api/services'),
+          fetch('/api/users?role=stylist'),
+        ])
+
+        if (!servicesRes.ok || !staffRes.ok) {
+          throw new Error('Failed to load POS data')
+        }
+
+        const servicesPayload = await servicesRes.json()
+        const staffPayload = await staffRes.json()
+
+        if (!active) return
+
+        const normalizedServices = (servicesPayload.data ?? []).map((service: any) => ({
+          id: service._id,
+          name: service.name,
+          category: service.category?.charAt(0).toUpperCase() + service.category?.slice(1),
+          duration: `${service.duration} min`,
+          price: service.price,
+          accent: '#2563EB',
+        }))
+
+        const normalizedStaff = (staffPayload.data ?? []).map((staff: any) => staff.name)
+
+        setServices(normalizedServices)
+        setStaffList(normalizedStaff)
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load POS data')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchData()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const trimmed = customerQuery.trim()
+
+    if (!trimmed) {
+      setCustomer(null)
+      setCustomerError(null)
+      return
+    }
+
+    const handler = setTimeout(async () => {
+      try {
+        setCustomerLoading(true)
+        setCustomerError(null)
+        const res = await fetch(`/api/customers?phone=${encodeURIComponent(trimmed)}`)
+        if (!res.ok) {
+          throw new Error('Customer lookup failed')
+        }
+        const payload = await res.json()
+        if (!active) return
+        const [result] = payload.data ?? []
+        setCustomer(result ?? null)
+      } catch (err) {
+        if (active) {
+          setCustomerError(err instanceof Error ? err.message : 'Customer lookup failed')
+        }
+      } finally {
+        if (active) {
+          setCustomerLoading(false)
+        }
+      }
+    }, 400)
+
+    return () => {
+      active = false
+      clearTimeout(handler)
+    }
+  }, [customerQuery])
+
   const addToCart = useCallback((s: (typeof SERVICES)[0]) => {
     setCart(prev => [
       ...prev,
@@ -582,12 +679,12 @@ export function POSBilling() {
         serviceId: s.id,
         name: s.name,
         price: s.price,
-        staff: STAFF[Math.floor(Math.random() * STAFF.length)],
+        staff: staffList[Math.floor(Math.random() * staffList.length)] ?? 'Staff',
         duration: s.duration,
         category: s.category,
       },
     ])
-  }, [])
+  }, [staffList])
 
   const removeFromCart = (uid: string) =>
     setCart(prev => prev.filter(i => i.uid !== uid))
@@ -595,9 +692,11 @@ export function POSBilling() {
   const updateStaff = (uid: string, staff: string) =>
     setCart(prev => prev.map(i => i.uid === uid ? { ...i, staff } : i))
 
+  const categories = ['All', ...Array.from(new Set(services.map((s) => s.category)))]
+
   const filtered = activeCategory === "All"
-    ? SERVICES
-    : SERVICES.filter(s => s.category === activeCategory)
+    ? services
+    : services.filter(s => s.category === activeCategory)
 
   return (
     <div className="flex flex-col h-full w-full bg-[#0A0B0F] overflow-hidden font-sans">
@@ -638,29 +737,54 @@ export function POSBilling() {
           <input
             type="text"
             placeholder="Search customer by name or phone..."
-            defaultValue="Anjali Singh"
+            value={customerQuery}
+            onChange={(e) => setCustomerQuery(e.target.value)}
             className="bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground/50 w-full"
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
           />
           {/* Customer badge */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-              AS
-            </span>
-            <span className="text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full tracking-wider">
-              GOLD
-            </span>
-            <span className="text-[10px] text-muted-foreground">320 pts</span>
-            <span className="text-[10px] text-muted-foreground/40">·</span>
-            <span className="text-[10px] text-muted-foreground">12 visits</span>
+            {customerLoading ? (
+              <div className="h-6 w-24 rounded-md bg-white/5 animate-pulse" />
+            ) : customer ? (
+              <>
+                <span className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                  {(customer.name ?? 'G')
+                    .split(' ')
+                    .map((part: string) => part[0])
+                    .join('')
+                    .slice(0, 2)}
+                </span>
+                <span className="text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full tracking-wider">
+                  {String(customer.membershipTier ?? 'none').toUpperCase()}
+                </span>
+                <span className="text-[10px] text-muted-foreground">{customer.loyaltyPoints ?? 0} pts</span>
+                <span className="text-[10px] text-muted-foreground/40">·</span>
+                <span className="text-[10px] text-muted-foreground">{customer.totalVisits ?? 0} visits</span>
+              </>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">No customer</span>
+            )}
           </div>
         </div>
+
+        {customerError && (
+          <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+            {customerError}
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+            {error}
+          </div>
+        )}
 
         {/* Category tabs */}
         <div className="shrink-0 mb-4">
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
@@ -683,7 +807,12 @@ export function POSBilling() {
             <span className="ml-2 text-primary/60">{filtered.length}</span>
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {filtered.map((s, i) => (
+            {loading && (
+              Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="h-[110px] rounded-xl bg-[#16181F] border border-white/5 animate-pulse" />
+              ))
+            )}
+            {!loading && filtered.map((s, i) => (
               <motion.div
                 key={s.id}
                 initial={{ opacity: 0, y: 12 }}
@@ -718,6 +847,7 @@ export function POSBilling() {
             setShowInvoice(true)
           }
         }}
+        staffOptions={staffList}
       />
 
       {/* ── INVOICE MODAL ── */}

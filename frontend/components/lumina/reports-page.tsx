@@ -30,80 +30,24 @@ import {
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 
-const REVENUE_DATA = [
-  { date: 'May 1', revenue: 8200 },
-  { date: 'May 2', revenue: 9100 },
-  { date: 'May 3', revenue: 14800 },
-  { date: 'May 4', revenue: 15200 },
-  { date: 'May 5', revenue: 9600 },
-  { date: 'May 6', revenue: 8800 },
-  { date: 'May 7', revenue: 7900 },
-  { date: 'May 8', revenue: 10200 },
-  { date: 'May 9', revenue: 9400 },
-  { date: 'May 10', revenue: 15600 },
-  { date: 'May 11', revenue: 14900 },
-  { date: 'May 12', revenue: 8700 },
-  { date: 'May 13', revenue: 9300 },
-  { date: 'May 14', revenue: 10100 },
-  { date: 'May 15', revenue: 11200 },
-  { date: 'May 16', revenue: 10600 },
-  { date: 'May 17', revenue: 15400 },
-  { date: 'May 18', revenue: 16000 },
-  { date: 'May 19', revenue: 9800 },
-  { date: 'May 20', revenue: 8500 },
-  { date: 'May 21', revenue: 9200 },
-  { date: 'May 22', revenue: 10400 },
-  { date: 'May 23', revenue: 10900 },
-  { date: 'May 24', revenue: 15800 },
-  { date: 'May 25', revenue: 14600 },
-  { date: 'May 26', revenue: 9100 },
-  { date: 'May 27', revenue: 8400 },
-  { date: 'May 28', revenue: 9700 },
-  { date: 'May 29', revenue: 10300 },
-  { date: 'May 30', revenue: 11100 },
-]
+type RevenuePoint = { date: string; revenue: number }
+type BookingChannelPoint = { week: string; Web: number; WhatsApp: number; WalkIn: number; Call: number }
+type TopServicePoint = { service: string; revenue: number }
+type CustomerSplitPoint = { name: string; value: number }
+type StaffRow = { name: string; appts: number; revenue: number; commission: number }
+type BranchPoint = { name: string; revenue: number; pct: number; color: string }
 
-const BOOKINGS_BY_CHANNEL = [
-  { week: 'Week 1', Web: 45, WhatsApp: 38, WalkIn: 22, Call: 12 },
-  { week: 'Week 2', Web: 52, WhatsApp: 41, WalkIn: 19, Call: 15 },
-  { week: 'Week 3', Web: 38, WhatsApp: 55, WalkIn: 25, Call: 8 },
-  { week: 'Week 4', Web: 61, WhatsApp: 47, WalkIn: 21, Call: 11 },
-]
-
-const TOP_SERVICES = [
-  { service: 'Hair Color', revenue: 86500 },
-  { service: 'Haircut', revenue: 48000 },
-  { service: 'Facial', revenue: 31200 },
-  { service: 'Keratin', revenue: 28400 },
-  { service: 'Manicure', revenue: 19800 },
-  { service: 'Pedicure', revenue: 16200 },
-  { service: 'Hair Spa', revenue: 14500 },
-  { service: 'Head Massage', revenue: 11800 },
-]
-
-const CUSTOMER_SPLIT = [
-  { name: 'Returning', value: 62 },
-  { name: 'New', value: 38 },
-]
-
-const STAFF_DATA = [
-  { name: 'Priya Sharma', appts: 28, revenue: 42000, commission: 5040 },
-  { name: 'Rahul Verma', appts: 22, revenue: 31500, commission: 3150 },
-  { name: 'Sneha Iyer', appts: 19, revenue: 27800, commission: 2780 },
-  { name: 'Vikram D', appts: 31, revenue: 48200, commission: 5784 },
-  { name: 'Meera Kapoor', appts: 35, revenue: 21000, commission: 1680 },
-]
-
-const BRANCH_DATA = [
-  { name: 'Banjara Hills', revenue: 140000, pct: 88, color: '#2563EB' },
-  { name: 'Jubilee Hills', revenue: 110000, pct: 71, color: '#7C3AED' },
-  { name: 'Madhapur', revenue: 80000, pct: 52, color: '#0D9488' },
-]
+const EMPTY_REVENUE: RevenuePoint[] = []
+const EMPTY_BOOKINGS: BookingChannelPoint[] = []
+const EMPTY_SERVICES: TopServicePoint[] = []
+const EMPTY_CUSTOMER_SPLIT: CustomerSplitPoint[] = []
+const EMPTY_STAFF_ROWS: StaffRow[] = []
+const EMPTY_BRANCHES: BranchPoint[] = []
+const WEEK_LABELS = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
+const DEFAULT_BRANCH_OPTIONS = ['All Branches']
 
 const PRESETS = ['Today', 'Week', 'Month', 'Last Month'] as const
 type Preset = (typeof PRESETS)[number]
-
-const BRANCHES = ['All Branches', 'Banjara Hills', 'Jubilee Hills', 'Madhapur']
 
 const PIE_COLORS = ['#10B981', '#2563EB']
 const BAR_COLORS = { Web: '#2563EB', WalkIn: '#F59E0B', WhatsApp: '#10B981', Call: '#7C3AED' }
@@ -114,6 +58,149 @@ function formatRupee(v: number) {
   if (v >= 100000) return `₹${(v / 100000).toFixed(1)}L`
   if (v >= 1000) return `₹${(v / 1000).toFixed(0)}k`
   return `₹${v}`
+}
+
+function formatMonthDay(date: Date) {
+  const monthLabel = new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(date)
+  return `${monthLabel} ${date.getDate()}`
+}
+
+function buildRevenueSeries(invoices: any[], refDate: Date): RevenuePoint[] {
+  const year = refDate.getFullYear()
+  const month = refDate.getMonth()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const totals = Array.from({ length: daysInMonth }, () => 0)
+
+  invoices.forEach((inv) => {
+    const date = new Date(inv.createdAt ?? inv.updatedAt ?? inv.date ?? inv.appointmentId?.slot ?? Date.now())
+    if (date.getFullYear() !== year || date.getMonth() !== month) return
+    totals[date.getDate() - 1] += Number(inv.total ?? 0)
+  })
+
+  return totals.map((value, index) => (
+    { date: formatMonthDay(new Date(year, month, index + 1)), revenue: Math.round(value) }
+  ))
+}
+
+function buildBookingsByChannel(appointments: any[], refDate: Date): BookingChannelPoint[] {
+  const year = refDate.getFullYear()
+  const month = refDate.getMonth()
+  const buckets = WEEK_LABELS.map((week) => ({ week, Web: 0, WhatsApp: 0, WalkIn: 0, Call: 0 }))
+
+  appointments.forEach((apt) => {
+    const date = new Date(apt.slot ?? apt.date ?? apt.createdAt ?? Date.now())
+    if (date.getFullYear() !== year || date.getMonth() !== month) return
+    const idx = Math.min(3, Math.floor((date.getDate() - 1) / 7))
+    const channel = String(apt.channel ?? 'web').toLowerCase()
+    const key = channel === 'whatsapp'
+      ? 'WhatsApp'
+      : channel === 'walkin'
+      ? 'WalkIn'
+      : channel === 'call'
+      ? 'Call'
+      : 'Web'
+    buckets[idx][key] += 1
+  })
+
+  return buckets
+}
+
+function buildTopServices(appointments: any[]): TopServicePoint[] {
+  const totals: Record<string, number> = {}
+  appointments.forEach((apt) => {
+    const name = apt.serviceId?.name ?? apt.serviceName ?? 'Service'
+    const price = Number(apt.price ?? apt.serviceId?.price ?? 0)
+    totals[name] = (totals[name] ?? 0) + price
+  })
+
+  return Object.entries(totals)
+    .map(([service, revenue]) => ({ service, revenue: Math.round(revenue) }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 8)
+}
+
+function buildCustomerSplit(customers: any[]): { split: CustomerSplitPoint[]; total: number } {
+  const total = customers.length
+  if (total === 0) {
+    return { split: [], total }
+  }
+  const newCount = customers.filter((c) => Number(c.totalVisits ?? 0) <= 1).length
+  const returning = total - newCount
+  const newPct = Math.round((newCount / total) * 100)
+  const returningPct = 100 - newPct
+  return {
+    split: [
+      { name: 'Returning', value: returningPct },
+      { name: 'New', value: newPct },
+    ],
+    total,
+  }
+}
+
+function buildStaffRows(users: any[], appointments: any[], invoices: any[]): StaffRow[] {
+  const rows = new Map<string, StaffRow>()
+
+  users.forEach((user) => {
+    const key = String(user._id ?? user.id ?? user.name)
+    rows.set(key, { name: user.name ?? 'Staff', appts: 0, revenue: 0, commission: 0 })
+  })
+
+  appointments.forEach((apt) => {
+    const staffId = apt.staffId?._id ?? apt.staffId
+    if (!staffId) return
+    const key = String(staffId)
+    const existing = rows.get(key) ?? {
+      name: apt.staffId?.name ?? 'Staff',
+      appts: 0,
+      revenue: 0,
+      commission: 0,
+    }
+    existing.appts += 1
+    rows.set(key, existing)
+  })
+
+  invoices.forEach((inv) => {
+    const lineItems = Array.isArray(inv.lineItems) ? inv.lineItems : []
+    lineItems.forEach((item: any) => {
+      const staffId = item.staffId?._id ?? item.staffId ?? item.staffName
+      if (!staffId) return
+      const key = String(staffId)
+      const existing = rows.get(key) ?? {
+        name: item.staffName ?? item.staffId?.name ?? 'Staff',
+        appts: 0,
+        revenue: 0,
+        commission: 0,
+      }
+      const price = Number(item.price ?? 0)
+      const commission = Number(item.commissionAmount ?? Math.round(price * (Number(item.commissionRate ?? 0) / 100)))
+      existing.revenue += price
+      existing.commission += commission
+      rows.set(key, existing)
+    })
+  })
+
+  return Array.from(rows.values()).sort((a, b) => b.revenue - a.revenue)
+}
+
+function buildBranchData(branches: any[], invoices: any[]): BranchPoint[] {
+  const totals: Record<string, number> = {}
+  invoices.forEach((inv) => {
+    const branchId = inv.branchId?._id ?? inv.branchId
+    if (!branchId) return
+    const key = String(branchId)
+    totals[key] = (totals[key] ?? 0) + Number(inv.total ?? 0)
+  })
+  const maxRevenue = Math.max(...Object.values(totals), 1)
+  const colors = ['#2563EB', '#7C3AED', '#0D9488', '#F59E0B', '#EC4899']
+  return branches.map((branch, index) => {
+    const revenue = totals[String(branch._id)] ?? 0
+    return {
+      name: branch.name,
+      revenue,
+      pct: Math.round((revenue / maxRevenue) * 100),
+      color: colors[index % colors.length],
+    }
+  })
 }
 
 // ─── Count-up hook ───────────────────────────────────────────────────────────
@@ -208,7 +295,7 @@ function KpiCard({ label, value, prefix = '', trend, icon, iconColor, delay = 0 
 
 // ─── Branch Bar ──────────────────────────────────────────────────────────────
 
-function BranchBar({ branch, index }: { branch: typeof BRANCH_DATA[number]; index: number }) {
+function BranchBar({ branch, index }: { branch: BranchPoint; index: number }) {
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true })
   return (
@@ -235,7 +322,7 @@ function BranchBar({ branch, index }: { branch: typeof BRANCH_DATA[number]; inde
 
 type SortKey = 'name' | 'appts' | 'revenue' | 'commission'
 
-function StaffTable() {
+function StaffTable({ rows, loading }: { rows: StaffRow[]; loading: boolean }) {
   const [sortKey, setSortKey] = useState<SortKey>('revenue')
   const [sortAsc, setSortAsc] = useState(false)
 
@@ -244,7 +331,7 @@ function StaffTable() {
     else { setSortKey(key); setSortAsc(false) }
   }
 
-  const sorted = [...STAFF_DATA].sort((a, b) => {
+  const sorted = [...rows].sort((a, b) => {
     const av = a[sortKey]
     const bv = b[sortKey]
     if (typeof av === 'string') return sortAsc ? av.localeCompare(bv as string) : (bv as string).localeCompare(av)
@@ -280,9 +367,15 @@ function StaffTable() {
           </tr>
         </thead>
         <tbody>
-          {sorted.map((row, i) => (
+          {loading ? (
+            <tr>
+              <td colSpan={4} className="py-6">
+                <div className="h-20 rounded-lg bg-bg-elevated/60 animate-pulse" />
+              </td>
+            </tr>
+          ) : sorted.map((row, i) => (
             <tr
-              key={row.name}
+              key={`${row.name}-${i}`}
               className="border-b border-border/50 transition-colors hover:bg-[#2563EB08]"
             >
               <td className="py-2.5 font-medium text-text-primary">{row.name}</td>
@@ -326,12 +419,108 @@ function ServiceBarLabel(props: any) {
 
 export default function ReportsPage() {
   const [preset, setPreset] = useState<Preset>('Month')
-  const [branch, setBranch] = useState('All Branches')
+  const [branch, setBranch] = useState(DEFAULT_BRANCH_OPTIONS[0])
   const [branchOpen, setBranchOpen] = useState(false)
   const [revToggle, setRevToggle] = useState<'Daily' | 'Weekly'>('Daily')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [customers, setCustomers] = useState<any[]>([])
+  const [branches, setBranches] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [revenueData, setRevenueData] = useState<RevenuePoint[]>(EMPTY_REVENUE)
+  const [bookingsByChannel, setBookingsByChannel] = useState<BookingChannelPoint[]>(EMPTY_BOOKINGS)
+  const [topServices, setTopServices] = useState<TopServicePoint[]>(EMPTY_SERVICES)
+  const [customerSplit, setCustomerSplit] = useState<CustomerSplitPoint[]>(EMPTY_CUSTOMER_SPLIT)
+  const [staffRows, setStaffRows] = useState<StaffRow[]>(EMPTY_STAFF_ROWS)
+  const [branchData, setBranchData] = useState<BranchPoint[]>(EMPTY_BRANCHES)
+  const [totalCustomers, setTotalCustomers] = useState(0)
+
+  useEffect(() => {
+    let active = true
+
+    const fetchReportsData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const [appointmentsRes, invoicesRes, customersRes, branchesRes, usersRes] = await Promise.all([
+          fetch('/api/appointments'),
+          fetch('/api/invoices'),
+          fetch('/api/customers'),
+          fetch('/api/branches'),
+          fetch('/api/users'),
+        ])
+
+        if (!appointmentsRes.ok || !invoicesRes.ok || !customersRes.ok || !branchesRes.ok || !usersRes.ok) {
+          throw new Error('Failed to load reports data')
+        }
+
+        const [appointmentsPayload, invoicesPayload, customersPayload, branchesPayload, usersPayload] = await Promise.all([
+          appointmentsRes.json(),
+          invoicesRes.json(),
+          customersRes.json(),
+          branchesRes.json(),
+          usersRes.json(),
+        ])
+
+        if (!active) return
+
+        setAppointments(appointmentsPayload.data ?? [])
+        setInvoices(invoicesPayload.data ?? [])
+        setCustomers(customersPayload.data ?? [])
+        setBranches(branchesPayload.data ?? [])
+        setUsers(usersPayload.data ?? [])
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load reports data')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchReportsData()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const referenceDate = new Date()
+    const branchFilteredAppointments = branch === 'All Branches'
+      ? appointments
+      : appointments.filter((apt) => apt.branchId?.name === branch)
+    const branchFilteredInvoices = branch === 'All Branches'
+      ? invoices
+      : invoices.filter((inv) => inv.branchId?.name === branch)
+
+    setRevenueData(buildRevenueSeries(branchFilteredInvoices, referenceDate))
+    setBookingsByChannel(buildBookingsByChannel(branchFilteredAppointments, referenceDate))
+    setTopServices(buildTopServices(branchFilteredAppointments))
+
+    const { split, total } = buildCustomerSplit(customers)
+    setCustomerSplit(split)
+    setTotalCustomers(total)
+
+    setStaffRows(buildStaffRows(users, branchFilteredAppointments, branchFilteredInvoices))
+    setBranchData(buildBranchData(branches, branchFilteredInvoices))
+  }, [appointments, invoices, customers, branches, users, branch])
 
   // every-5th-date ticks for area chart X axis
-  const xTicks = REVENUE_DATA.filter((_, i) => i % 5 === 0).map((d) => d.date)
+  const xTicks = revenueData.filter((_, i) => i % 5 === 0).map((d) => d.date)
+
+  const branchOptions = [
+    ...DEFAULT_BRANCH_OPTIONS,
+    ...branches.map((item) => item.name).filter((name) => !DEFAULT_BRANCH_OPTIONS.includes(name)),
+  ]
+
+  const totalRevenue = invoices.reduce((sum, inv) => sum + Number(inv.total ?? 0), 0)
+  const totalAppointments = appointments.length
+  const newCustomerCount = customers.filter((c) => Number(c.totalVisits ?? 0) <= 1).length
+  const avgBill = invoices.length > 0 ? Math.round(totalRevenue / invoices.length) : 0
 
   return (
     <div className="space-y-6">
@@ -367,7 +556,7 @@ export default function ReportsPage() {
             </button>
             {branchOpen && (
               <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-lg border border-border bg-bg-elevated shadow-xl">
-                {BRANCHES.map((b) => (
+                {branchOptions.map((b) => (
                   <button
                     key={b}
                     onClick={() => { setBranch(b); setBranchOpen(false) }}
@@ -388,13 +577,27 @@ export default function ReportsPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">
+          {error}
+        </div>
+      )}
+
       {/* ── KPI row ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <KpiCard label="Total Revenue" value={324500} prefix="₹" trend={18} icon={<TrendingUp size={18} />} iconColor="#10B981" delay={0} />
-        <KpiCard label="Appointments" value={412} trend={8} icon={<Calendar size={18} />} iconColor="#2563EB" delay={0.05} />
-        <KpiCard label="New Customers" value={67} trend={23} icon={<UserPlus size={18} />} iconColor="#10B981" delay={0.1} />
-        <KpiCard label="Avg Bill" value={787} prefix="₹" trend={-3} icon={<TrendingDown size={18} />} iconColor="#EF4444" delay={0.15} />
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-[104px] rounded-xl border border-border bg-bg-card animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <KpiCard label="Total Revenue" value={totalRevenue} prefix="₹" trend={18} icon={<TrendingUp size={18} />} iconColor="#10B981" delay={0} />
+          <KpiCard label="Appointments" value={totalAppointments} trend={8} icon={<Calendar size={18} />} iconColor="#2563EB" delay={0.05} />
+          <KpiCard label="New Customers" value={newCustomerCount} trend={23} icon={<UserPlus size={18} />} iconColor="#10B981" delay={0.1} />
+          <KpiCard label="Avg Bill" value={avgBill} prefix="₹" trend={-3} icon={<TrendingDown size={18} />} iconColor="#EF4444" delay={0.15} />
+        </div>
+      )}
 
       {/* ── Revenue area chart ── */}
       <motion.div
@@ -417,41 +620,45 @@ export default function ReportsPage() {
             ))}
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={REVENUE_DATA} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2563EB" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="#ffffff08" vertical={false} />
-            <XAxis
-              dataKey="date"
-              ticks={xTicks}
-              tick={{ fill: '#94A3B8', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
-              tick={{ fill: '#94A3B8', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              width={48}
-            />
-            <Tooltip content={<DarkTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="revenue"
-              stroke="#2563EB"
-              strokeWidth={2}
-              fill="url(#blueGrad)"
-              isAnimationActive
-              animationDuration={1000}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {loading ? (
+          <div className="h-[280px] rounded-lg bg-bg-elevated/60 animate-pulse" />
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={revenueData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2563EB" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#ffffff08" vertical={false} />
+              <XAxis
+                dataKey="date"
+                ticks={xTicks}
+                tick={{ fill: '#94A3B8', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                tick={{ fill: '#94A3B8', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                width={48}
+              />
+              <Tooltip content={<DarkTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#2563EB"
+                strokeWidth={2}
+                fill="url(#blueGrad)"
+                isAnimationActive
+                animationDuration={1000}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </motion.div>
 
       {/* ── Two-column row ── */}
@@ -460,50 +667,58 @@ export default function ReportsPage() {
         {/* Bookings by channel */}
         <div className="rounded-xl border border-border bg-bg-card p-5">
           <h3 className="mb-4 text-sm font-semibold text-text-primary">Bookings by Channel</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={BOOKINGS_BY_CHANNEL} barCategoryGap="28%">
-              <CartesianGrid stroke="#ffffff08" vertical={false} />
-              <XAxis dataKey="week" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
-              <Tooltip content={<ChannelTooltip />} />
-              <Legend
-                wrapperStyle={{ fontSize: 11, color: '#94A3B8', paddingTop: 8 }}
-                iconType="circle"
-                iconSize={8}
-              />
-              <Bar dataKey="Web" name="Web" fill={BAR_COLORS.Web} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="WhatsApp" name="WhatsApp" fill={BAR_COLORS.WhatsApp} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="WalkIn" name="Walk-in" fill={BAR_COLORS.WalkIn} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="Call" name="Call" fill={BAR_COLORS.Call} radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {loading ? (
+            <div className="h-[250px] rounded-lg bg-bg-elevated/60 animate-pulse" />
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={bookingsByChannel} barCategoryGap="28%">
+                <CartesianGrid stroke="#ffffff08" vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip content={<ChannelTooltip />} />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, color: '#94A3B8', paddingTop: 8 }}
+                  iconType="circle"
+                  iconSize={8}
+                />
+                <Bar dataKey="Web" name="Web" fill={BAR_COLORS.Web} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="WhatsApp" name="WhatsApp" fill={BAR_COLORS.WhatsApp} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="WalkIn" name="Walk-in" fill={BAR_COLORS.WalkIn} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Call" name="Call" fill={BAR_COLORS.Call} radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Top services horizontal bar */}
         <div className="rounded-xl border border-border bg-bg-card p-5">
           <h3 className="mb-4 text-sm font-semibold text-text-primary">Top Services</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart
-              data={TOP_SERVICES}
-              layout="vertical"
-              margin={{ top: 0, right: 64, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid stroke="#ffffff08" horizontal={false} />
-              <XAxis type="number" hide />
-              <YAxis
-                type="category"
-                dataKey="service"
-                tick={{ fill: '#94A3B8', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                width={90}
-              />
-              <Tooltip content={<DarkTooltip />} />
-              <Bar dataKey="revenue" fill="#2563EB" radius={[0, 3, 3, 0]} isAnimationActive>
-                <LabelList dataKey="revenue" content={<ServiceBarLabel />} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {loading ? (
+            <div className="h-[250px] rounded-lg bg-bg-elevated/60 animate-pulse" />
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart
+                data={topServices}
+                layout="vertical"
+                margin={{ top: 0, right: 64, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid stroke="#ffffff08" horizontal={false} />
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category"
+                  dataKey="service"
+                  tick={{ fill: '#94A3B8', fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={90}
+                />
+                <Tooltip content={<DarkTooltip />} />
+                <Bar dataKey="revenue" fill="#2563EB" radius={[0, 3, 3, 0]} isAnimationActive>
+                  <LabelList dataKey="revenue" content={<ServiceBarLabel />} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -514,55 +729,63 @@ export default function ReportsPage() {
         <div className="rounded-xl border border-border bg-bg-card p-5 flex flex-col">
           <h3 className="mb-2 text-sm font-semibold text-text-primary">Customer Split</h3>
           <div className="flex-1 flex flex-col items-center">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={CUSTOMER_SPLIT}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  startAngle={90}
-                  endAngle={-270}
-                  dataKey="value"
-                  labelLine={false}
-                  label={renderPieLabel}
-                  isAnimationActive
-                >
-                  {CUSTOMER_SPLIT.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i]} />
+            {loading ? (
+              <div className="h-[200px] rounded-lg bg-bg-elevated/60 animate-pulse" />
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={customerSplit}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      startAngle={90}
+                      endAngle={-270}
+                      dataKey="value"
+                      labelLine={false}
+                      label={renderPieLabel}
+                      isAnimationActive
+                    >
+                      {customerSplit.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i]} />
+                      ))}
+                    </Pie>
+                    <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central" fill="#F8FAFC" fontSize={15} fontWeight={700}>
+                      {totalCustomers}
+                    </text>
+                    <text x="50%" y="56%" textAnchor="middle" dominantBaseline="central" fill="#94A3B8" fontSize={10}>
+                      total
+                    </text>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex items-center gap-4 text-xs">
+                  {customerSplit.map((d, i) => (
+                    <span key={d.name} className="flex items-center gap-1.5 text-text-muted">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }} />
+                      {d.name} ({d.value}%)
+                    </span>
                   ))}
-                </Pie>
-                <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central" fill="#F8FAFC" fontSize={15} fontWeight={700}>
-                  412
-                </text>
-                <text x="50%" y="56%" textAnchor="middle" dominantBaseline="central" fill="#94A3B8" fontSize={10}>
-                  total
-                </text>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex items-center gap-4 text-xs">
-              {CUSTOMER_SPLIT.map((d, i) => (
-                <span key={d.name} className="flex items-center gap-1.5 text-text-muted">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }} />
-                  {d.name} ({d.value}%)
-                </span>
-              ))}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Staff performance table */}
         <div className="rounded-xl border border-border bg-bg-card p-5">
           <h3 className="mb-4 text-sm font-semibold text-text-primary">Staff Performance</h3>
-          <StaffTable />
+          <StaffTable rows={staffRows} loading={loading} />
         </div>
 
         {/* Branch comparison */}
         <div className="rounded-xl border border-border bg-bg-card p-5">
           <h3 className="mb-5 text-sm font-semibold text-text-primary">Branch Comparison</h3>
           <div className="space-y-5">
-            {BRANCH_DATA.map((b, i) => (
+            {loading ? (
+              <div className="h-28 rounded-lg bg-bg-elevated/60 animate-pulse" />
+            ) : branchData.map((b, i) => (
               <BranchBar key={b.name} branch={b} index={i} />
             ))}
           </div>

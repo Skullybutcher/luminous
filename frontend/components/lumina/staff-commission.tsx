@@ -26,90 +26,107 @@ interface ServiceBreakdown {
   commission: number
 }
 
-// ─── Dummy Data ───────────────────────────────────────────────────────────────
-const STAFF: StaffMember[] = [
-  {
-    id: 1, name: 'Priya Sharma', initials: 'PS', role: 'Senior Stylist',
-    services: 28, revenue: 42000, commissionRate: 12, commission: 5040,
-    weeklyBars: [55, 70, 40, 85, 60, 90, 75],
-    gradientFrom: '#2563EB', gradientTo: '#7C3AED',
-    breakdown: [
-      { service: 'Keratin Treatment', count: 8, revenue: 16000, commission: 1920 },
-      { service: 'Hair Color + Cut',  count: 10, revenue: 14000, commission: 1680 },
-      { service: 'Blow Dry & Style',  count: 5,  revenue: 5000,  commission: 600  },
-      { service: 'Deep Conditioning', count: 3,  revenue: 4500,  commission: 540  },
-      { service: 'Hair Spa',          count: 2,  revenue: 2500,  commission: 300  },
-    ],
-  },
-  {
-    id: 2, name: 'Rahul Verma', initials: 'RV', role: 'Stylist',
-    services: 22, revenue: 31500, commissionRate: 10, commission: 3150,
-    weeklyBars: [40, 55, 65, 50, 70, 45, 60],
-    gradientFrom: '#0EA5E9', gradientTo: '#2563EB',
-    breakdown: [
-      { service: 'Haircut & Styling', count: 12, revenue: 9600,  commission: 960  },
-      { service: 'Hair Color',        count: 5,  revenue: 10000, commission: 1000 },
-      { service: 'Beard Design',      count: 3,  revenue: 1500,  commission: 150  },
-      { service: 'Hair Spa',          count: 2,  revenue: 7400,  commission: 740  },
-      { service: 'Scalp Treatment',   count: 0,  revenue: 3000,  commission: 300  },
-    ],
-  },
-  {
-    id: 3, name: 'Sneha Iyer', initials: 'SI', role: 'Stylist',
-    services: 19, revenue: 27800, commissionRate: 10, commission: 2780,
-    weeklyBars: [35, 45, 60, 40, 75, 55, 50],
-    gradientFrom: '#EC4899', gradientTo: '#F43F5E',
-    breakdown: [
-      { service: 'Facial & Cleanup',  count: 9,  revenue: 13500, commission: 1350 },
-      { service: 'Bridal Makeup',     count: 2,  revenue: 8000,  commission: 800  },
-      { service: 'Eyebrows & Lashes', count: 4,  revenue: 2800,  commission: 280  },
-      { service: 'Skin Brightening',  count: 3,  revenue: 2700,  commission: 270  },
-      { service: 'Party Makeup',      count: 1,  revenue: 800,   commission: 80   },
-    ],
-  },
-  {
-    id: 4, name: 'Vikram D', initials: 'VD', role: 'Senior Stylist',
-    services: 31, revenue: 48200, commissionRate: 12, commission: 5784,
-    weeklyBars: [65, 80, 55, 90, 70, 85, 95],
-    gradientFrom: '#F59E0B', gradientTo: '#EF4444',
-    breakdown: [
-      { service: 'Executive Haircut', count: 15, revenue: 15000, commission: 1800 },
-      { service: 'Hair Coloring',     count: 8,  revenue: 20000, commission: 2400 },
-      { service: 'Beard Sculpt',      count: 5,  revenue: 6000,  commission: 720  },
-      { service: 'Scalp Massage',     count: 2,  revenue: 4200,  commission: 504  },
-      { service: 'Hot Oil Treatment', count: 1,  revenue: 3000,  commission: 360  },
-    ],
-  },
-  {
-    id: 5, name: 'Meera Kapoor', initials: 'MK', role: 'Nail Tech',
-    services: 35, revenue: 21000, commissionRate: 8, commission: 1680,
-    weeklyBars: [75, 90, 80, 95, 85, 70, 88],
-    gradientFrom: '#7C3AED', gradientTo: '#EC4899',
-    breakdown: [
-      { service: 'Gel Nail Art',      count: 15, revenue: 9000,  commission: 720  },
-      { service: 'Manicure',          count: 10, revenue: 5000,  commission: 400  },
-      { service: 'Pedicure',          count: 7,  revenue: 4200,  commission: 336  },
-      { service: 'Nail Extensions',   count: 2,  revenue: 2400,  commission: 192  },
-      { service: 'French Tips',       count: 1,  revenue: 400,   commission: 32   },
-    ],
-  },
-  {
-    id: 6, name: 'Arjun T', initials: 'AT', role: 'Manager',
-    services: 15, revenue: 38000, commissionRate: 15, commission: 5700,
-    weeklyBars: [45, 60, 50, 70, 55, 65, 58],
-    gradientFrom: '#10B981', gradientTo: '#0EA5E9',
-    breakdown: [
-      { service: 'Premium Haircut',   count: 5,  revenue: 10000, commission: 1500 },
-      { service: 'VIP Grooming',      count: 4,  revenue: 12000, commission: 1800 },
-      { service: 'Consultation',      count: 4,  revenue: 8000,  commission: 1200 },
-      { service: 'Color Correction',  count: 1,  revenue: 6000,  commission: 900  },
-      { service: 'Package Deal',      count: 1,  revenue: 2000,  commission: 300  },
-    ],
-  },
+const EMPTY_STAFF: StaffMember[] = []
+const STAFF_GRADIENTS = [
+  ['#2563EB', '#7C3AED'],
+  ['#0EA5E9', '#2563EB'],
+  ['#EC4899', '#F43F5E'],
+  ['#F59E0B', '#EF4444'],
+  ['#7C3AED', '#EC4899'],
+  ['#10B981', '#0EA5E9'],
 ]
 
-const TOTAL_PAYOUT = STAFF.reduce((s, m) => s + m.commission, 0)
-const TOP_EARNER = STAFF.reduce((a, b) => a.commission > b.commission ? a : b)
+function buildStaffFromInvoices(
+  users: any[],
+  invoices: any[],
+  monthDate: Date,
+  branchName: string
+): StaffMember[] {
+  const staffMap = new Map<string, StaffMember>()
+  const year = monthDate.getFullYear()
+  const month = monthDate.getMonth()
+
+  users.forEach((user, index) => {
+    const key = String(user._id ?? user.id ?? user.name)
+    const initials = String(user.name ?? 'S')
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+    const [from, to] = STAFF_GRADIENTS[index % STAFF_GRADIENTS.length]
+    staffMap.set(key, {
+      id: index,
+      name: user.name ?? 'Staff',
+      initials,
+      role: user.role ?? 'Stylist',
+      services: 0,
+      revenue: 0,
+      commissionRate: Number(user.commissionRate ?? 0),
+      commission: 0,
+      weeklyBars: Array.from({ length: 7 }, () => 0),
+      gradientFrom: from,
+      gradientTo: to,
+      breakdown: [],
+    })
+  })
+
+  invoices.forEach((inv) => {
+    if (branchName !== 'All Branches' && inv.branchId?.name !== branchName) return
+    const createdAt = new Date(inv.createdAt ?? inv.updatedAt ?? Date.now())
+    if (createdAt.getFullYear() !== year || createdAt.getMonth() !== month) return
+
+    const dayIndex = createdAt.getDay()
+    const lineItems = Array.isArray(inv.lineItems) ? inv.lineItems : []
+    lineItems.forEach((item: any) => {
+      const staffId = item.staffId?._id ?? item.staffId ?? item.staffName
+      if (!staffId) return
+      const key = String(staffId)
+      const staff = staffMap.get(key) ?? {
+        id: staffMap.size,
+        name: item.staffName ?? 'Staff',
+        initials: String(item.staffName ?? 'S').slice(0, 2).toUpperCase(),
+        role: 'Stylist',
+        services: 0,
+        revenue: 0,
+        commissionRate: Number(item.commissionRate ?? 0),
+        commission: 0,
+        weeklyBars: Array.from({ length: 7 }, () => 0),
+        gradientFrom: STAFF_GRADIENTS[staffMap.size % STAFF_GRADIENTS.length][0],
+        gradientTo: STAFF_GRADIENTS[staffMap.size % STAFF_GRADIENTS.length][1],
+        breakdown: [],
+      }
+
+      const price = Number(item.price ?? 0)
+      const commission = Number(item.commissionAmount ?? Math.round(price * (Number(item.commissionRate ?? 0) / 100)))
+      staff.services += 1
+      staff.revenue += price
+      staff.commission += commission
+      staff.weeklyBars[dayIndex] = (staff.weeklyBars[dayIndex] ?? 0) + price
+
+      const serviceName = item.serviceName ?? item.serviceId?.name ?? 'Service'
+      const breakdownRow = staff.breakdown.find((row) => row.service === serviceName)
+      if (breakdownRow) {
+        breakdownRow.count += 1
+        breakdownRow.revenue += price
+        breakdownRow.commission += commission
+      } else {
+        staff.breakdown.push({ service: serviceName, count: 1, revenue: price, commission })
+      }
+
+      staffMap.set(key, staff)
+    })
+  })
+
+  return Array.from(staffMap.values())
+    .map((staff) => ({
+      ...staff,
+      weeklyBars: staff.weeklyBars.map((value) => Math.round(value)),
+      breakdown: staff.breakdown
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 6),
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
+}
 
 // ─── Animated Count-up ────────────────────────────────────────────────────────
 function CountUp({ target, prefix = '', suffix = '' }: { target: number; prefix?: string; suffix?: string }) {
@@ -341,9 +358,73 @@ function StaffCard({ member, index, onOpen }: { member: StaffMember; index: numb
 export function StaffCommission() {
   const [month, setMonth] = useState('May 2025')
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(EMPTY_STAFF)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [branchFilter, setBranchFilter] = useState('All Branches')
+  const [branchOptions, setBranchOptions] = useState<{ id: string; name: string }[]>([])
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
 
   const months = ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025']
   const monthIdx = months.indexOf(month)
+
+  useEffect(() => {
+    let active = true
+
+    const fetchStaffData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const [invoicesRes, usersRes, branchesRes] = await Promise.all([
+          fetch('/api/invoices'),
+          fetch('/api/users'),
+          fetch('/api/branches'),
+        ])
+
+        if (!invoicesRes.ok || !usersRes.ok || !branchesRes.ok) {
+          throw new Error('Failed to load staff commission data')
+        }
+
+        const [invoicesPayload, usersPayload, branchesPayload] = await Promise.all([
+          invoicesRes.json(),
+          usersRes.json(),
+          branchesRes.json(),
+        ])
+
+        if (!active) return
+
+        setInvoices(invoicesPayload.data ?? [])
+        setUsers(usersPayload.data ?? [])
+        setBranchOptions(branchesPayload.data ?? [])
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load staff commission data')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchStaffData()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const parsedMonth = new Date(`${month} 1`)
+    setStaffMembers(buildStaffFromInvoices(users, invoices, parsedMonth, branchFilter))
+  }, [users, invoices, month, branchFilter])
+
+  const totalPayout = staffMembers.reduce((sum, member) => sum + member.commission, 0)
+  const topEarner = staffMembers.reduce<StaffMember | null>((best, current) => {
+    if (!best) return current
+    return current.commission > best.commission ? current : best
+  }, null)
+  const avgPayout = staffMembers.length > 0 ? Math.round(totalPayout / staffMembers.length) : 0
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -373,9 +454,17 @@ export function StaffCommission() {
             </button>
           </div>
           {/* Branch */}
-          <select className="bg-[#1C1F2A] border border-white/8 rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none appearance-none cursor-pointer">
-            <option>Downtown Branch</option>
-            <option>Westside Branch</option>
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="bg-[#1C1F2A] border border-white/8 rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none appearance-none cursor-pointer"
+          >
+            <option value="All Branches">All Branches</option>
+            {branchOptions.map((branch) => (
+              <option key={branch.id ?? branch._id ?? branch.name} value={branch.name}>
+                {branch.name}
+              </option>
+            ))}
           </select>
           {/* Export */}
           <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-white/10 text-sm font-semibold text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors">
@@ -386,42 +475,55 @@ export function StaffCommission() {
       </div>
 
       <div className="flex-1 overflow-auto px-6 py-5">
+        {error && (
+          <div className="mb-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">
+            {error}
+          </div>
+        )}
         {/* Total overview card */}
-        <div
-          className="relative rounded-xl border border-white/5 p-5 mb-6 overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #1C1F2A 0%, #16181F 100%)' }}
-        >
-          <div className="absolute -right-16 -top-16 w-56 h-56 bg-primary/5 rounded-full blur-[48px] pointer-events-none" />
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total Commission Payout</p>
-              <p className="text-4xl font-bold text-foreground tracking-tight">
-                <span className="text-primary">₹</span>
-                <CountUp target={TOTAL_PAYOUT} />
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <div className="bg-black/20 border border-white/5 rounded-lg px-4 py-3 min-w-[130px]">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Top Earner</p>
-                <p className="text-sm font-bold text-foreground">{TOP_EARNER.name.split(' ')[0]}</p>
-                <p className="text-xs text-success font-semibold mt-0.5">₹{TOP_EARNER.commission.toLocaleString('en-IN')}</p>
-              </div>
-              <div className="bg-black/20 border border-white/5 rounded-lg px-4 py-3 min-w-[130px]">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Avg per Stylist</p>
-                <p className="text-sm font-bold text-foreground">
-                  ₹{Math.round(TOTAL_PAYOUT / STAFF.length).toLocaleString('en-IN')}
+        {loading ? (
+          <div className="h-[120px] rounded-xl border border-white/5 bg-bg-card animate-pulse mb-6" />
+        ) : (
+          <div
+            className="relative rounded-xl border border-white/5 p-5 mb-6 overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #1C1F2A 0%, #16181F 100%)' }}
+          >
+            <div className="absolute -right-16 -top-16 w-56 h-56 bg-primary/5 rounded-full blur-[48px] pointer-events-none" />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total Commission Payout</p>
+                <p className="text-4xl font-bold text-foreground tracking-tight">
+                  <span className="text-primary">₹</span>
+                  <CountUp target={totalPayout} />
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">{STAFF.length} staff</p>
+              </div>
+              <div className="flex gap-3">
+                <div className="bg-black/20 border border-white/5 rounded-lg px-4 py-3 min-w-[130px]">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Top Earner</p>
+                  <p className="text-sm font-bold text-foreground">{topEarner?.name?.split(' ')[0] ?? '—'}</p>
+                  <p className="text-xs text-success font-semibold mt-0.5">₹{(topEarner?.commission ?? 0).toLocaleString('en-IN')}</p>
+                </div>
+                <div className="bg-black/20 border border-white/5 rounded-lg px-4 py-3 min-w-[130px]">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Avg per Stylist</p>
+                  <p className="text-sm font-bold text-foreground">
+                    ₹{avgPayout.toLocaleString('en-IN')}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{staffMembers.length} staff</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Staff grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {STAFF.map((member, i) => (
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-[260px] rounded-xl border border-white/5 bg-bg-card animate-pulse" />
+            ))
+          ) : staffMembers.map((member, i) => (
             <StaffCard
-              key={member.id}
+              key={`${member.id}-${member.name}`}
               member={member}
               index={i}
               onOpen={() => setSelectedStaff(member)}

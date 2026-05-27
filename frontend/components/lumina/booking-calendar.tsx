@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Calendar,
@@ -42,8 +42,8 @@ interface Appointment {
   startTime: string
   endTime: string
   price: number
-  category: "hair" | "color" | "nails" | "spa"
-  status: "confirmed" | "in-progress" | "pending"
+  category: "hair" | "skin" | "nails" | "spa" | "packages" | "bridal" | "color"
+  status: "confirmed" | "in-progress" | "pending" | "completed" | "cancelled" | "no-show"
   bookedVia: "whatsapp" | "web" | "phone"
   notes?: string
 }
@@ -56,132 +56,8 @@ const categoryColors: Record<string, string> = {
   spa: "#10B981",
 }
 
-// Dummy data
-const staffMembers: Staff[] = [
-  {
-    id: "sarah",
-    name: "Sarah J.",
-    role: "Senior Stylist",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
-    available: true,
-  },
-  {
-    id: "marcus",
-    name: "Marcus T.",
-    role: "Colorist",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    available: true,
-  },
-  {
-    id: "elena",
-    name: "Elena R.",
-    role: "Nail Tech",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
-    available: true,
-  },
-  {
-    id: "alex",
-    name: "Alex B.",
-    role: "Off Today",
-    avatar: "",
-    available: false,
-  },
-]
-
-const appointments: Appointment[] = [
-  {
-    id: "1",
-    staffId: "sarah",
-    service: "Balayage & Cut",
-    customer: "Emma Watson",
-    phone: "+1 (555) 123-4567",
-    startTime: "09:15",
-    endTime: "10:30",
-    price: 180,
-    category: "hair",
-    status: "in-progress",
-    bookedVia: "web",
-    notes: "Client requested ash blonde tones. First time visiting this branch.",
-  },
-  {
-    id: "2",
-    staffId: "sarah",
-    service: "Blowout",
-    customer: "Jennifer Lopez",
-    phone: "+1 (555) 987-6543",
-    startTime: "11:00",
-    endTime: "11:45",
-    price: 65,
-    category: "hair",
-    status: "confirmed",
-    bookedVia: "phone",
-  },
-  {
-    id: "3",
-    staffId: "marcus",
-    service: "Root Touch-up",
-    customer: "John Doe",
-    phone: "+1 (555) 456-7890",
-    startTime: "11:00",
-    endTime: "12:00",
-    price: 95,
-    category: "color",
-    status: "confirmed",
-    bookedVia: "web",
-  },
-  {
-    id: "4",
-    staffId: "marcus",
-    service: "Full Color",
-    customer: "Sarah Miller",
-    phone: "+1 (555) 321-0987",
-    startTime: "13:00",
-    endTime: "14:30",
-    price: 150,
-    category: "color",
-    status: "pending",
-    bookedVia: "whatsapp",
-  },
-  {
-    id: "5",
-    staffId: "elena",
-    service: "Gel Manicure",
-    customer: "Lisa M.",
-    phone: "+1 (555) 111-2222",
-    startTime: "09:30",
-    endTime: "10:30",
-    price: 55,
-    category: "nails",
-    status: "confirmed",
-    bookedVia: "whatsapp",
-  },
-  {
-    id: "6",
-    staffId: "elena",
-    service: "Pedicure Deluxe",
-    customer: "Maria Garcia",
-    phone: "+1 (555) 333-4444",
-    startTime: "11:30",
-    endTime: "12:30",
-    price: 75,
-    category: "nails",
-    status: "confirmed",
-    bookedVia: "web",
-  },
-  {
-    id: "7",
-    staffId: "sarah",
-    service: "Men's Cut",
-    customer: "David Chen",
-    phone: "+1 (555) 555-6666",
-    startTime: "14:00",
-    endTime: "14:45",
-    price: 45,
-    category: "hair",
-    status: "confirmed",
-    bookedVia: "phone",
-  },
-]
+const EMPTY_STAFF: Staff[] = []
+const EMPTY_APPOINTMENTS: Appointment[] = []
 
 const timeSlots = [
   "08:00", "09:00", "10:00", "11:00", "12:00",
@@ -208,12 +84,138 @@ function formatTime(time: string) {
   return `${h}:${min.toString().padStart(2, "0")} ${ampm}`
 }
 
+function formatTimeFromDate(date: Date) {
+  return date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
+}
+
 export function BookingCalendar() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [viewMode, setViewMode] = useState<"Day" | "Week" | "Month">("Week")
   const [hoveredSlot, setHoveredSlot] = useState<{ staffId: string; hour: number } | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [staffMembers, setStaffMembers] = useState<Staff[]>(EMPTY_STAFF)
+  const [appointments, setAppointments] = useState<Appointment[]>(EMPTY_APPOINTMENTS)
+  const [branchId, setBranchId] = useState<string | null>(null)
+  const [services, setServices] = useState<any[]>([])
+  const [customers, setCustomers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [calendarDate] = useState(new Date())
+
+  useEffect(() => {
+    let active = true
+
+    const fetchSeed = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const [branchesRes, servicesRes, customersRes] = await Promise.all([
+          fetch('/api/branches'),
+          fetch('/api/services'),
+          fetch('/api/customers'),
+        ])
+
+        if (!branchesRes.ok || !servicesRes.ok || !customersRes.ok) {
+          throw new Error('Failed to load booking data')
+        }
+
+        const branchesPayload = await branchesRes.json()
+        const servicesPayload = await servicesRes.json()
+        const customersPayload = await customersRes.json()
+
+        if (!active) return
+
+        const firstBranch = branchesPayload.data?.[0]
+        setBranchId(firstBranch?._id ?? null)
+        setServices(servicesPayload.data ?? [])
+        setCustomers(customersPayload.data ?? [])
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load booking data')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchSeed()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    const fetchStaffAndAppointments = async () => {
+      if (!branchId) return
+      try {
+        setLoading(true)
+        setError(null)
+        const [staffRes, apptsRes] = await Promise.all([
+          fetch(`/api/users?branchId=${branchId}`),
+          fetch(`/api/appointments?branchId=${branchId}&date=${calendarDate.toISOString()}`),
+        ])
+
+        if (!staffRes.ok || !apptsRes.ok) {
+          throw new Error('Failed to load calendar data')
+        }
+
+        const staffPayload = await staffRes.json()
+        const apptsPayload = await apptsRes.json()
+
+        if (!active) return
+
+        const normalizedStaff = (staffPayload.data ?? []).map((staff: any) => ({
+          id: staff._id,
+          name: staff.name,
+          role: staff.role,
+          avatar: '',
+          available: staff.isActive,
+        }))
+
+        const normalizedAppts = (apptsPayload.data ?? []).map((appt: any) => {
+          const slot = new Date(appt.slot)
+          const duration = appt.duration ?? appt.serviceId?.duration ?? 30
+          const end = new Date(slot.getTime() + duration * 60000)
+
+          return {
+            id: appt._id,
+            staffId: appt.staffId?._id ?? appt.staffId,
+            service: appt.serviceId?.name ?? 'Service',
+            customer: appt.customerId?.name ?? 'Customer',
+            phone: appt.customerId?.phone ?? '',
+            startTime: slot.toTimeString().slice(0, 5),
+            endTime: end.toTimeString().slice(0, 5),
+            price: appt.price ?? 0,
+            category: (appt.serviceId?.category ?? 'hair') as Appointment['category'],
+            status: appt.status ?? 'pending',
+            bookedVia: appt.channel === 'call' || appt.channel === 'walkin' ? 'phone' : appt.channel,
+            notes: appt.notes,
+          }
+        })
+
+        setStaffMembers(normalizedStaff)
+        setAppointments(normalizedAppts)
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load calendar data')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchStaffAndAppointments()
+    return () => {
+      active = false
+    }
+  }, [branchId, calendarDate])
 
   const openDrawer = (appointment: Appointment) => {
     setSelectedAppointment(appointment)
@@ -259,7 +261,7 @@ export function BookingCalendar() {
           {/* Date Picker */}
           <button className="flex items-center gap-2 px-4 py-2 bg-[#16181F] rounded-lg border border-white/5 text-sm text-white hover:border-[#2563EB]/50 transition-colors">
             <Calendar className="w-4 h-4 text-[#2563EB]" />
-            Oct 24, 2023
+            {calendarDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
             <ChevronDown className="w-4 h-4 text-gray-400 ml-1" />
           </button>
           
@@ -296,13 +298,26 @@ export function BookingCalendar() {
         </div>
       </div>
 
+      {error && (
+        <div className="mx-4 mt-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-xs text-red-300">
+          {error}
+        </div>
+      )}
+
       {/* Calendar Grid */}
       <div className="flex-1 overflow-hidden flex flex-col bg-[#0D0E14] m-4 rounded-xl border border-white/5">
         {/* Staff Headers */}
         <div className="flex border-b border-white/5 bg-[#0A0B0F] flex-shrink-0">
           <div className="w-16 flex-shrink-0 border-r border-white/5" />
           <div className="flex-1 grid grid-cols-4 divide-x divide-white/5">
-            {staffMembers.map((staff) => (
+            {loading && staffMembers.length === 0 ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="py-3 px-4 flex items-center gap-3 justify-center">
+                  <div className="w-8 h-8 rounded-full bg-white/5 animate-pulse" />
+                  <div className="h-3 w-16 rounded bg-white/5 animate-pulse" />
+                </div>
+              ))
+            ) : staffMembers.map((staff) => (
               <div
                 key={staff.id}
                 className={`py-3 px-4 flex items-center gap-3 justify-center ${
@@ -310,11 +325,23 @@ export function BookingCalendar() {
                 }`}
               >
                 {staff.available ? (
-                  <img
-                    src={staff.avatar}
-                    alt={staff.name}
-                    className="w-8 h-8 rounded-full border border-white/10 object-cover"
-                  />
+                  staff.avatar ? (
+                    <img
+                      src={staff.avatar}
+                      alt={staff.name}
+                      className="w-8 h-8 rounded-full border border-white/10 object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-[#16181F] flex items-center justify-center">
+                      <span className="text-[10px] text-gray-400">
+                        {staff.name
+                          .split(' ')
+                          .map((part) => part[0])
+                          .join('')
+                          .slice(0, 2)}
+                      </span>
+                    </div>
+                  )
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-[#16181F] flex items-center justify-center">
                     <User className="w-4 h-4 text-gray-500" />
@@ -601,7 +628,14 @@ export function BookingCalendar() {
       </AnimatePresence>
 
       {/* New Booking Modal */}
-      <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <NewBookingModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        services={services}
+        staff={staffMembers}
+        customers={customers}
+        branchId={branchId}
+      />
 
       {/* Custom scrollbar styles */}
       <style jsx global>{`
@@ -626,46 +660,7 @@ export function BookingCalendar() {
 
 // ─── NewBookingModal ────────────────────────────────────────────────────────
 
-const SERVICE_LIST = [
-  { name: "Haircut", duration: "45min", price: "₹800" },
-  { name: "Hair Color", duration: "90min", price: "₹2,500" },
-  { name: "Facial", duration: "60min", price: "₹1,200" },
-  { name: "Manicure", duration: "30min", price: "₹600" },
-  { name: "Hair Spa", duration: "60min", price: "₹1,500" },
-  { name: "Pedicure", duration: "45min", price: "₹700" },
-]
-
-const STAFF_LIST = [
-  { name: "No Pref.", rating: null, initials: "★" },
-  { name: "Priya", rating: "4.9", initials: "PR" },
-  { name: "Rahul", rating: "4.7", initials: "RA" },
-  { name: "Sneha", rating: "4.8", initials: "SN" },
-  { name: "Vikram", rating: "4.6", initials: "VK" },
-  { name: "Meera", rating: "4.8", initials: "ME" },
-]
-
-const MORNING_SLOTS = [
-  { time: "9:00", available: true },
-  { time: "9:30", available: true },
-  { time: "10:00", available: false },
-  { time: "10:30", available: true },
-  { time: "11:00", available: false },
-  { time: "11:30", available: true },
-]
-const AFTERNOON_SLOTS = [
-  { time: "12:00", available: true },
-  { time: "1:00", available: false },
-  { time: "2:00", available: true },
-  { time: "3:00", available: true },
-  { time: "4:00", available: true },
-  { time: "4:30", available: true },
-]
-const EVENING_SLOTS = [
-  { time: "5:00", available: true },
-  { time: "5:30", available: true },
-  { time: "6:00", available: false },
-  { time: "7:00", available: true },
-]
+const EMPTY_SLOTS: { time: string; available: boolean; raw: string }[] = []
 
 const BOOKING_CHANNELS = [
   { id: "web", label: "Web", Icon: Globe },
@@ -673,8 +668,6 @@ const BOOKING_CHANNELS = [
   { id: "walkin", label: "Walk-in", Icon: User },
   { id: "call", label: "Call", Icon: Phone },
 ]
-
-const SERVICE_CATEGORIES = ["All", "Hair", "Skin", "Nails", "Spa", "Packages"]
 
 function generateDateChips() {
   const chips = []
@@ -694,9 +687,20 @@ function generateDateChips() {
 interface NewBookingModalProps {
   open: boolean
   onClose: () => void
+  services?: any[]
+  staff?: Staff[]
+  customers?: any[]
+  branchId?: string | null
 }
 
-export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
+export function NewBookingModal({
+  open,
+  onClose,
+  services = [],
+  staff = [],
+  customers = [],
+  branchId = null,
+}: NewBookingModalProps) {
   const [step, setStep] = useState(1)
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState("All")
@@ -705,8 +709,98 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [selectedChannel, setSelectedChannel] = useState("whatsapp")
   const [waToggle, setWaToggle] = useState(true)
+  const [selectedCustomer, setSelectedCustomer] = useState(0)
+  const [slots, setSlots] = useState(EMPTY_SLOTS)
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [slotsError, setSlotsError] = useState<string | null>(null)
 
   const dateChips = generateDateChips()
+  const selectedServiceData = services.find((svc) => svc._id === selectedService)
+  const selectedStaffData = staff[selectedStaff]
+  const selectedCustomerData = customers[selectedCustomer]
+  const selectedDateValue = (() => {
+    const today = new Date()
+    const date = new Date(today)
+    date.setDate(today.getDate() + selectedDate)
+    return date
+  })()
+
+  const staffId = selectedStaffData?.id
+
+  useEffect(() => {
+    let active = true
+
+    const fetchSlots = async () => {
+      if (!branchId || !selectedService || !staffId) {
+        setSlots(EMPTY_SLOTS)
+        return
+      }
+
+      try {
+        setSlotsLoading(true)
+        setSlotsError(null)
+        
+        const queryDate = new Date()
+        queryDate.setDate(queryDate.getDate() + selectedDate)
+
+        const res = await fetch(
+          `/api/appointments/slots?branchId=${branchId}&staffId=${staffId}&serviceId=${selectedService}&date=${queryDate.toISOString()}`
+        )
+
+        if (!res.ok) {
+          throw new Error('Failed to load slots')
+        }
+
+        const payload = await res.json()
+        if (!active) return
+
+        const normalized = (payload.data ?? []).map((slot: any) => {
+          const time = new Date(slot.time)
+          return {
+            raw: slot.time,
+            time: time.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }),
+            available: slot.available,
+          }
+        })
+
+        setSlots(normalized)
+      } catch (err) {
+        if (active) {
+          setSlotsError(err instanceof Error ? err.message : 'Failed to load slots')
+        }
+      } finally {
+        if (active) {
+          setSlotsLoading(false)
+        }
+      }
+    }
+
+    fetchSlots()
+    return () => {
+      active = false
+    }
+  }, [branchId, selectedService, staffId, selectedDate])
+
+  const slotGroups = [
+    {
+      label: "Morning",
+      slots: slots.filter((slot) => {
+        const hour = new Date(slot.raw).getHours()
+        return hour < 12
+      }),
+    },
+    {
+      label: "Afternoon",
+      slots: slots.filter((slot) => {
+        const hour = new Date(slot.raw).getHours()
+        return hour >= 12 && hour < 17
+      }),
+    },
+    {
+      label: "Evening",
+      slots: slots.filter((slot) => new Date(slot.raw).getHours() >= 17),
+    },
+  ]
 
   const handleClose = () => {
     onClose()
@@ -720,8 +814,23 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
       setSelectedSlot(null)
       setSelectedChannel("whatsapp")
       setWaToggle(true)
+      setSelectedCustomer(0)
+      setSlots(EMPTY_SLOTS)
+      setSlotsError(null)
     }, 300)
   }
+
+  const serviceCategories = [
+    "All",
+    ...Array.from(
+      new Set(services.map((svc) => svc.category?.charAt(0).toUpperCase() + svc.category?.slice(1)))
+    ),
+  ]
+  const filteredServices = selectedCategory === "All"
+    ? services
+    : services.filter(
+        (svc) => (svc.category?.charAt(0).toUpperCase() + svc.category?.slice(1)) === selectedCategory
+      )
 
   const STEP_LABELS = ["Customer", "Service", "Schedule", "Confirm"]
 
@@ -836,27 +945,40 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
                       />
                     </div>
                     {/* Customer result */}
-                    <div className="bg-[#1C1F2A] rounded-xl p-4 mt-3 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                        AS
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-white">Anjali Singh</p>
-                        <p className="text-sm text-gray-400">+91 98765 43210</p>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium border border-amber-500/20">
-                            Gold
-                          </span>
-                          <span className="text-[11px] text-gray-500">24 visits</span>
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#2563EB]/15 text-[#2563EB] border border-[#2563EB]/20">
-                            320 pts
-                          </span>
+                    {selectedCustomerData ? (
+                      <div className="bg-[#1C1F2A] rounded-xl p-4 mt-3 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {(selectedCustomerData.name ?? 'G')
+                            .split(' ')
+                            .map((part: string) => part[0])
+                            .join('')
+                            .slice(0, 2)}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-white">{selectedCustomerData.name ?? 'Guest'}</p>
+                          <p className="text-sm text-gray-400">{selectedCustomerData.phone ?? ''}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium border border-amber-500/20">
+                              {String(selectedCustomerData.membershipTier ?? 'none').toUpperCase()}
+                            </span>
+                            <span className="text-[11px] text-gray-500">{selectedCustomerData.totalVisits ?? 0} visits</span>
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#2563EB]/15 text-[#2563EB] border border-[#2563EB]/20">
+                              {selectedCustomerData.loyaltyPoints ?? 0} pts
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSelectedCustomer((v) => (v + 1) % Math.max(customers.length, 1))}
+                          className="ml-auto flex-shrink-0 text-sm text-[#2563EB] font-semibold hover:text-[#2563EB]/80 transition-colors"
+                        >
+                          Next →
+                        </button>
                       </div>
-                      <button className="ml-auto flex-shrink-0 text-sm text-[#2563EB] font-semibold hover:text-[#2563EB]/80 transition-colors">
-                        Select →
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="bg-[#1C1F2A] rounded-xl p-4 mt-3 text-sm text-gray-400">
+                        No customers found.
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -866,7 +988,7 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
                     <h3 className="text-lg font-semibold text-white mb-4">Select Service</h3>
                     {/* Category tabs */}
                     <div className="flex gap-2 mb-4 flex-wrap">
-                      {SERVICE_CATEGORIES.map((cat) => (
+                      {serviceCategories.map((cat) => (
                         <button
                           key={cat}
                           onClick={() => setSelectedCategory(cat)}
@@ -882,12 +1004,12 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
                     </div>
                     {/* Service grid */}
                     <div className="grid grid-cols-3 gap-3">
-                      {SERVICE_LIST.map((svc) => {
-                        const isSelected = selectedService === svc.name
+                      {filteredServices.map((svc) => {
+                        const isSelected = selectedService === svc._id
                         return (
                           <button
-                            key={svc.name}
-                            onClick={() => setSelectedService(svc.name)}
+                            key={svc._id}
+                            onClick={() => setSelectedService(svc._id)}
                             className={`relative bg-[#1C1F2A] rounded-xl p-4 text-left cursor-pointer border transition-colors ${
                               isSelected
                                 ? "border-[#2563EB]"
@@ -900,10 +1022,10 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
                             <p className="font-medium text-white text-sm mb-2">{svc.name}</p>
                             <div className="flex items-center gap-2">
                               <span className="text-xs bg-[#0A0B0F] px-2 py-0.5 rounded text-gray-400">
-                                {svc.duration}
+                                {svc.duration} min
                               </span>
                               <span className="text-xs font-semibold text-[#2563EB] ml-auto">
-                                {svc.price}
+                                ₹{svc.price}
                               </span>
                             </div>
                           </button>
@@ -921,9 +1043,9 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
                     {/* Staff */}
                     <p className="text-sm text-gray-400 mb-2">Select Staff</p>
                     <div className="flex gap-3 pb-2 overflow-x-auto">
-                      {STAFF_LIST.map((staff, idx) => (
+                      {staff.map((staffItem, idx) => (
                         <button
-                          key={staff.name}
+                          key={staffItem.id}
                           onClick={() => setSelectedStaff(idx)}
                           className={`flex-shrink-0 w-20 text-center rounded-xl p-2 transition-colors ${
                             selectedStaff === idx
@@ -932,12 +1054,13 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
                           }`}
                         >
                           <div className="w-10 h-10 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                            {staff.initials}
+                            {staffItem.name
+                              .split(' ')
+                              .map((part) => part[0])
+                              .join('')
+                              .slice(0, 2)}
                           </div>
-                          <p className="text-xs mt-1 text-white truncate">{staff.name}</p>
-                          {staff.rating && (
-                            <p className="text-[10px] text-amber-400">{staff.rating} <Star className="w-2.5 h-2.5 inline" /></p>
-                          )}
+                          <p className="text-xs mt-1 text-white truncate">{staffItem.name}</p>
                         </button>
                       ))}
                     </div>
@@ -963,15 +1086,18 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
                     {/* Time slots */}
                     <p className="text-sm text-gray-400 mt-4 mb-2">Available Times</p>
                     <div className="space-y-3">
-                      {[
-                        { label: "Morning", slots: MORNING_SLOTS },
-                        { label: "Afternoon", slots: AFTERNOON_SLOTS },
-                        { label: "Evening", slots: EVENING_SLOTS },
-                      ].map(({ label, slots }) => (
+                      {slotsError && (
+                        <div className="text-xs text-red-400">{slotsError}</div>
+                      )}
+                      {slotGroups.map(({ label, slots }) => (
                         <div key={label}>
                           <p className="text-xs text-gray-500 mb-2">{label}</p>
                           <div className="flex flex-wrap gap-2">
-                            {slots.map((s) => <StepSlot key={s.time} s={s} />)}
+                            {slotsLoading && slots.length === 0 ? (
+                              <div className="h-6 w-32 rounded-md bg-white/5 animate-pulse" />
+                            ) : (
+                              slots.map((s) => <StepSlot key={s.time} s={s} />)
+                            )}
                           </div>
                         </div>
                       ))}
@@ -987,13 +1113,23 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
                     {/* Summary */}
                     <div className="bg-[#0A0B0F] rounded-xl p-5 space-y-3">
                       {[
-                        { label: "Service", value: "Haircut", valueClass: "text-[#2563EB]", extra: "₹800" },
-                        { label: "Customer", value: "Anjali Singh" },
-                        { label: "Staff", value: "Priya Sharma" },
-                        { label: "Date & Time", value: "Tomorrow, 9:00 AM" },
-                        { label: "Branch", value: "Banjara Hills" },
-                        { label: "Duration", value: "45 minutes" },
-                      ].map((row) => (
+                        {
+                          label: "Service",
+                          value: selectedServiceData?.name ?? "",
+                          valueClass: "text-[#2563EB]",
+                          extra: selectedServiceData ? `₹${selectedServiceData.price}` : undefined,
+                        },
+                        { label: "Customer", value: selectedCustomerData?.name ?? "" },
+                        { label: "Staff", value: selectedStaffData?.name ?? "" },
+                        {
+                          label: "Date & Time",
+                          value: selectedSlot
+                            ? `${selectedDateValue.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}, ${selectedSlot}`
+                            : "",
+                        },
+                        { label: "Branch", value: branchId ? "Selected branch" : "" },
+                        { label: "Duration", value: selectedServiceData ? `${selectedServiceData.duration} minutes` : "" },
+                      ].filter((row) => row.value).map((row) => (
                         <div key={row.label} className="flex justify-between items-center">
                           <span className="text-sm text-gray-400">{row.label}</span>
                           <div className="flex items-center gap-2">

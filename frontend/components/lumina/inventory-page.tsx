@@ -21,7 +21,8 @@ import { cn } from '@/lib/utils'
 type StockStatus = 'CRITICAL' | 'LOW' | 'GOOD'
 
 interface Product {
-  id: number
+  id?: number
+  _id?: string
   name: string
   category: string
   current: number
@@ -34,20 +35,7 @@ interface Product {
   status: StockStatus
 }
 
-const PRODUCTS: Product[] = [
-  { id: 1, name: 'Hair Serum Pro', category: 'Hair', current: 0, max: 20, min: 5, unit: 'bottles', cost: 450, retail: 890, restocked: 'Never', status: 'CRITICAL' },
-  { id: 2, name: 'Keratin Shampoo', category: 'Hair', current: 3, max: 15, min: 5, unit: 'bottles', cost: 380, retail: 750, restocked: '2w ago', status: 'LOW' },
-  { id: 3, name: 'Hair Color Black', category: 'Hair', current: 12, max: 30, min: 8, unit: 'tubes', cost: 120, retail: 280, restocked: '3d ago', status: 'GOOD' },
-  { id: 4, name: 'Nail Polish Remover', category: 'Nails', current: 0, max: 10, min: 3, unit: 'bottles', cost: 80, retail: 180, restocked: 'Never', status: 'CRITICAL' },
-  { id: 5, name: 'Base Coat', category: 'Nails', current: 2, max: 8, min: 3, unit: 'bottles', cost: 150, retail: 320, restocked: '1w ago', status: 'LOW' },
-  { id: 6, name: 'Facial Cleanser', category: 'Skin', current: 8, max: 20, min: 5, unit: 'units', cost: 520, retail: 980, restocked: '5d ago', status: 'GOOD' },
-  { id: 7, name: 'Moisturizer SPF', category: 'Skin', current: 4, max: 12, min: 4, unit: 'units', cost: 680, retail: 1200, restocked: '1w ago', status: 'LOW' },
-  { id: 8, name: 'Massage Oil', category: 'Spa', current: 15, max: 25, min: 6, unit: 'bottles', cost: 290, retail: 580, restocked: '2d ago', status: 'GOOD' },
-  { id: 9, name: 'Scrub Exfoliator', category: 'Skin', current: 6, max: 15, min: 4, unit: 'units', cost: 340, retail: 680, restocked: '4d ago', status: 'GOOD' },
-  { id: 10, name: 'Nail Art Kit', category: 'Nails', current: 1, max: 5, min: 2, unit: 'kits', cost: 890, retail: 1600, restocked: '3w ago', status: 'LOW' },
-  { id: 11, name: 'Henna Powder', category: 'Hair', current: 22, max: 30, min: 8, unit: 'packs', cost: 65, retail: 150, restocked: '1d ago', status: 'GOOD' },
-  { id: 12, name: 'Wax Strips', category: 'Skin', current: 18, max: 40, min: 10, unit: 'packs', cost: 45, retail: 120, restocked: '1d ago', status: 'GOOD' },
-]
+const EMPTY_PRODUCTS: Product[] = []
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; color: string; bg: string; border: string; barColor: string }> = {
   CRITICAL: { label: 'Critical', color: 'text-danger', bg: 'bg-danger/10', border: 'border-danger/40', barColor: '#EF4444' },
@@ -307,28 +295,99 @@ export default function InventoryPage() {
   const [statusFilter, setStatusFilter] = useState('All')
   const [alertDismissed, setAlertDismissed] = useState(false)
   const [restockProduct, setRestockProduct] = useState<Product | null>(null)
+  const [products, setProducts] = useState<Product[]>(EMPTY_PRODUCTS)
+  const [branchId, setBranchId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const categories = ['All', ...Array.from(new Set(PRODUCTS.map((p) => p.category)))]
+  useEffect(() => {
+    let active = true
+
+    const fetchBranches = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const res = await fetch('/api/branches')
+        if (!res.ok) {
+          throw new Error('Failed to load branches')
+        }
+        const payload = await res.json()
+        if (!active) return
+        const firstBranch = payload.data?.[0]
+        const nextBranchId = firstBranch?._id ?? null
+        setBranchId(nextBranchId)
+        if (!nextBranchId) {
+          setLoading(false)
+          setError('No branches available')
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load branches')
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchBranches()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    const fetchInventory = async () => {
+      if (!branchId) return
+      try {
+        setLoading(true)
+        setError(null)
+        const res = await fetch(`/api/inventory?branchId=${branchId}`)
+        if (!res.ok) {
+          throw new Error('Failed to load inventory')
+        }
+        const payload = await res.json()
+        if (active) {
+          setProducts(payload.data ?? [])
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load inventory')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchInventory()
+    return () => {
+      active = false
+    }
+  }, [branchId])
+
+  const categories = ['All', ...Array.from(new Set(products.map((p) => p.category)))]
   const statuses = ['All', 'Good', 'Low', 'Critical']
 
-  const filtered = PRODUCTS.filter((p) => {
+  const filtered = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase())
     const matchCat = categoryFilter === 'All' || p.category === categoryFilter
     const matchStatus = statusFilter === 'All' || p.status === statusFilter.toUpperCase()
     return matchSearch && matchCat && matchStatus
   })
 
-  const totalValue = PRODUCTS.reduce((sum, p) => sum + p.current * p.cost, 0)
-  const lowCount = PRODUCTS.filter((p) => p.status === 'LOW').length
-  const criticalCount = PRODUCTS.filter((p) => p.status === 'CRITICAL').length
+  const totalValue = products.reduce((sum, p) => sum + p.current * p.cost, 0)
+  const lowCount = products.filter((p) => p.status === 'LOW').length
+  const criticalCount = products.filter((p) => p.status === 'CRITICAL').length
 
-  const criticalItems = PRODUCTS.filter((p) => p.status === 'CRITICAL').map((p) => p.name)
+  const criticalItems = products.filter((p) => p.status === 'CRITICAL').map((p) => p.name)
 
   return (
     <div className="flex flex-col gap-6">
       {/* Critical Alert Banner */}
       <AnimatePresence>
-        {!alertDismissed && criticalCount > 0 && (
+        {!alertDismissed && criticalCount > 0 && !loading && !error && (
           <motion.div
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -360,12 +419,26 @@ export default function InventoryPage() {
       </AnimatePresence>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <KpiCard title="Total SKUs" value={48} icon={<Package size={18} />} accent="#2563EB" delay={0} />
-        <KpiCard title="Low Stock" value={lowCount} icon={<TrendingDown size={18} />} accent="#F59E0B" delay={0.05} />
-        <KpiCard title="Out of Stock" value={criticalCount} icon={<AlertTriangle size={18} />} accent="#EF4444" delay={0.1} glow />
-        <KpiCard title="Inventory Value" value={totalValue} prefix="₹" icon={<IndianRupee size={18} />} accent="#22C55E" delay={0.15} />
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-[108px] rounded-xl border border-white/5 bg-bg-card animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <KpiCard title="Total SKUs" value={products.length} icon={<Package size={18} />} accent="#2563EB" delay={0} />
+          <KpiCard title="Low Stock" value={lowCount} icon={<TrendingDown size={18} />} accent="#F59E0B" delay={0.05} />
+          <KpiCard title="Out of Stock" value={criticalCount} icon={<AlertTriangle size={18} />} accent="#EF4444" delay={0.1} glow />
+          <KpiCard title="Inventory Value" value={totalValue} prefix="₹" icon={<IndianRupee size={18} />} accent="#22C55E" delay={0.15} />
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -432,9 +505,16 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((product, i) => (
+              {loading && (
+                <tr>
+                  <td colSpan={10} className="px-4 py-8">
+                    <div className="h-24 rounded-lg bg-bg-elevated/60 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+              {!loading && filtered.map((product, i) => (
                 <motion.tr
-                  key={product.id}
+                  key={product._id ?? product.id ?? i}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.2, delay: i * 0.03 }}
@@ -483,7 +563,7 @@ export default function InventoryPage() {
                   </td>
                 </motion.tr>
               ))}
-              {filtered.length === 0 && (
+              {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={10} className="px-4 py-12 text-center text-sm text-text-muted">
                     No products match your filters.
