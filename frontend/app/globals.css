@@ -1,0 +1,109 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Luminous Design Tokens */
+  --bg-primary: #0A0B0F;
+  --bg-card: #16181F;
+  --bg-elevated: #1C1F2A;
+  --accent: #2563EB;
+  --text-primary: #F8FAFC;
+  --text-muted: #94A3B8;
+
+  /* Semantic tokens */
+  --background: #0A0B0F;
+  --foreground: #F8FAFC;
+  --card: #16181F;
+  --card-foreground: #F8FAFC;
+  --popover: #1C1F2A;
+  --popover-foreground: #F8FAFC;
+  --primary: #2563EB;
+  --primary-foreground: #F8FAFC;
+  --secondary: #1C1F2A;
+  --secondary-foreground: #94A3B8;
+  --muted: #16181F;
+  --muted-foreground: #94A3B8;
+  --accent-color: #2563EB;
+  --accent-foreground: #F8FAFC;
+  --destructive: #EF4444;
+  --destructive-foreground: #F8FAFC;
+  --border: rgba(255,255,255,0.06);
+  --input: #1C1F2A;
+  --ring: #2563EB;
+  --radius: 0.625rem;
+
+  /* Status colors */
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --info: #2563EB;
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Inter Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-color);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    box-sizing: border-box;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2563EB60;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2563EB;
+  }
+  
+  /* Selection */
+  ::selection {
+    background: #2563EB40;
+  }
+}
